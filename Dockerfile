@@ -7,6 +7,7 @@ WORKDIR /app
 # Copia los archivos de requerimientos y los instala
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
+RUN python manage.py migrate
 
 # Copia el código fuente de tu aplicación en la imagen
 COPY . /app/
