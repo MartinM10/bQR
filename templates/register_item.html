@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% load crispy_forms_filters %}
+
+{% block content %}
+    <form action="" method="post" enctype="multipart/form-data" class="mx-auto">
+        {% csrf_token %}
+        <div class="card" style="max-width: 40rem; margin: 0 auto;">
+            <div class="card-body">
+                <h5 class="card-title">Rellene los campos con los datos de su item</h5>
+                <br/>
+                {{ form|crispy }}
+                <div class="d-flex justify-content-center align-items-center mt-3">
+                    <button class="btn btn-primary" type="submit">Registrar Item</button>
+                </div>
+            </div>
+        </div>
+    </form>
+{% endblock %}

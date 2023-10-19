@@ -1,0 +1,21 @@
+# Archivos generados por el sistema operativo
+.DS_Store
+
+# Archivos generados por IDEs o editores de código
+.idea/
+.vscode/
+*.pyc
+
+# Carpeta donde se almacenan las dependencias o módulos instalados
+venv/
+env/
+__pycache__/
+
+# Configuraciones específicas del sistema
+*.db
+*.sqlite3
+
+# Archivos y carpetas específicos de Django
+/static/
+/media/
+.env

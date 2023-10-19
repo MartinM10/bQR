@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    {% if request.user.is_authenticated %}
+        <div class="welcome">
+            <h3>Bienvenido, {{ request.user.username }}</h3>
+        </div>
+        <div class="user-image-link">
+            <a href="{% url 'change_profile_picture' %}">
+                <div class="user-image-container">
+                    <img src="{{ request.user.get_image }}" class="user-image" width="80" alt="User Image">
+                </div>
+            </a>
+        </div>
+        <br>
+        <br>
+        {% if request.user.item_set.all %}
+            <div class="item-list">
+                <h4>Tus items:</h4>
+                <table class="table table-responsive">
+                    <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th class="text-center">Imagen</th>
+                        <th class="text-center">Código QR</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for item in request.user.item_set.all %}
+                        <tr>
+                            <td class="centered-cell">
+                                <a href="{% url 'edit_item' item.uuid %}">
+                                    {{ item.name }}
+                                </a>
+                            </td>
+                            <td class="text-center centered-cell">
+                                <a href="{% url 'change_item_picture' item.uuid %}">
+                                    <img src="{{ item.get_image }}" class="item-photo" width="80"
+                                         alt="Imagen del item">
+                                </a>
+                            </td>
+                            <td class="text-center centered-cell">
+                                {% if item.get_qrcode %}
+                                    <img src="{{ item.get_qrcode }}" class="qrcode" alt="Código QR" width="60">
+                                    <a href="{% url 'download_qr' item.uuid %}" class="btn btn-primary btn-sm"
+                                       download>
+                                        <i class="bi bi-cloud-download" style="margin-right: 4px"></i>
+                                        Descargar
+                                    </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p>No tienes items registrados.</p>
+        {% endif %}
+    {% else %}
+
+    {% endif %}
+{% endblock %}

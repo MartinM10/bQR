@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block content %}
+    <div class="card" style="max-width: 40rem; margin: 0 auto;">
+        <div class="card-body">
+            <div class="message-container">
+                {% if success %}
+                    <p class="success-message text-center">
+                        <i class="bi bi-envelope-check"></i>
+                        {{ message }}
+                    </p>
+                    <div class="d-flex justify-content-center align-items-center mt-3">
+                        <a class="btn btn-primary btn-sm" href="{% url 'home' %}">
+                            Ir al inicio
+                        </a>
+                    </div>
+                {% else %}
+                    <p class="error-message">
+                        <i class="bi bi-envelope-exclamation"></i>
+                        {{ message }}
+                    </p>
+                    <div class="d-flex justify-content-center align-items-center mt-3">
+                        <a class="btn btn-primary btn-sm" href="javascript:location.reload(true);">
+                            Volver a intentar
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
