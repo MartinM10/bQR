@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% load crispy_forms_filters %}
+
+{% block content %}
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">Editar Preferencias de Notificación</h4>
+        </div>
+        <div class="card-body">
+            {% if form.fields %}
+                <form method="post" id="notification-form">
+                    {% csrf_token %}
+                    {% if 'notification_schedule' in form.fields %}
+                        <div class="mb-3">
+                            {{ form.notification_schedule|as_crispy_field }}
+                        </div>
+                        <div id="custom-time" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.notification_start_time|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.notification_end_time|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    {% if 'email_notifications' in form.fields %}
+                        {{ form.email_notifications|as_crispy_field }}
+                    {% endif %}
+                    {% if 'sms_notifications' in form.fields %}
+                        {{ form.sms_notifications|as_crispy_field }}
+                    {% endif %}
+                    {% if 'push_notifications' in form.fields %}
+                        {{ form.push_notifications|as_crispy_field }}
+                    {% endif %}
+                    {% if 'whatsapp_notifications' in form.fields %}
+                        {{ form.whatsapp_notifications|as_crispy_field }}
+                    {% endif %}
+                    {% if 'show_contact_info_on_scan' in form.fields %}
+                        {{ form.show_contact_info_on_scan|as_crispy_field }}
+                        <div class="alert alert-info" role="alert">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Consejo:</strong> Al activar esta opción tu número de teléfono y tu email serán
+                            públicos y cualquier persona que escanee alguno de tus QR podrá verlos.
+                        </div>
+                    {% endif %}
+                    <button type="submit" class="btn btn-primary">Guardar Preferencias</button>
+                </form>
+            {% else %}
+                <p>Tu plan actual no permite modificar las preferencias de notificación.</p>
+                <a href="{% url 'manage_subscription' %}" class="btn btn-primary">Ver Planes de Suscripción</a>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item active" aria-current="page">Editar Preferencias de Notificación</li>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('notification-form');
+            if (form) {
+                const scheduleInputs = form.querySelectorAll('input[name="notification_schedule"]');
+                const customTimeDiv = document.getElementById('custom-time');
+
+                function toggleCustomTime() {
+                    const selectedSchedule = Array.from(scheduleInputs).find(input => input.checked);
+                    if (selectedSchedule) {
+                        customTimeDiv.style.display = selectedSchedule.value === 'custom' ? 'block' : 'none';
+                    }
+                }
+
+                scheduleInputs.forEach(input => {
+                    input.addEventListener('change', toggleCustomTime);
+                });
+
+                // Llamar a la función inicialmente para configurar el estado correcto
+                toggleCustomTime();
+            } else {
+                console.error('El formulario de notificaciones no se encontró en la página.');
+            }
+        });
+    </script>
+{% endblock %}

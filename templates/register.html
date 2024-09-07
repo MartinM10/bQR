@@ -1,26 +1,71 @@
 {% extends 'base.html' %}
 {% load crispy_forms_filters %}
-
 {% block content %}
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card" style="max-width: 40rem; margin: 0 auto;">
-                <div class="card-body">
-                    <h5 class="card-title">Complete todos los campos</h5>
-                    <br/>
-                    <form action="" method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        {{ form | crispy }}
-                        <div class="text-center">
-                            <button class="btn btn-primary btn-sm" type="submit">Registrarse</button>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <a href="{% url 'home' %}" class="btn btn-link">Ir al inicio</a>
-                            <a href="{% url 'login' %}" class="btn btn-link">Iniciar sesión</a>
-                        </div>
-                    </form>
-                </div>
+    <main class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <article class="card shadow">
+                    <header class="card-header bg-primary text-white">
+                        <h1 class="h4 mb-0">Registro de Usuario</h1>
+                    </header>
+                    <div class="card-body">
+                        <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    {{ form.username|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    {{ form.email|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    {{ form.first_name|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    {{ form.last_name|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    {{ form.phone|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    {{ form.gender|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    {{ form.password1|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    {{ form.password2|as_crispy_field }}
+                                </div>
+                            </div>
+                            {{ form.image|as_crispy_field }}
+                            <div class="alert alert-info" role="alert">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Consejo:</strong> Elige una imagen de perfil que te represente.
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-primary" type="submit">
+                                    <i class="bi bi-person-plus me-2"></i>Registrarse
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <footer class="card-footer text-center">
+                        <p class="mb-0">
+                            ¿Ya tienes una cuenta? <a href="{% url 'login' %}">Inicia sesión</a>
+                        </p>
+                    </footer>
+                </article>
             </div>
         </div>
-    </div>
+    </main>
+{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item active" aria-current="page">Registro</li>
 {% endblock %}

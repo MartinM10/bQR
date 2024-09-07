@@ -1,13 +1,26 @@
-version: "3"
+version: '3.8'
 
 services:
-  app-web-owner:
-    image: owner_qr
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: owner_qr
+  web:
+    build: .
+    command: gunicorn ownerQR.wsgi:application --bind 0.0.0.0:8000
+    volumes:
+      - .:/code
     ports:
       - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/ownerQR_db
+      - DEBUG=0
+  db:
+    image: postgres:13
     volumes:
-      - ~/volumes/django:/var/opt/django-owner-qr
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=ownerQR_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+
+volumes:
+  postgres_data:

@@ -1,18 +1,39 @@
 {% extends 'base.html' %}
 {% load crispy_forms_filters %}
-
 {% block content %}
-    <form action="" method="post" enctype="multipart/form-data" class="mx-auto">
-        {% csrf_token %}
-        <div class="card" style="max-width: 40rem; margin: 0 auto;">
-            <div class="card-body">
-                <h5 class="card-title">Rellene los campos con los datos de su item</h5>
-                <br/>
-                {{ form|crispy }}
-                <div class="d-flex justify-content-center align-items-center mt-3">
-                    <button class="btn btn-primary" type="submit">Registrar Item</button>
+    <main class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Registrar Nuevo Item</h5>
+                </div>
+                <div class="card-body">
+                    <form action="" method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-6">{{ form.name|as_crispy_field }}</div>
+                            <div class="col-md-6">{{ form.image|as_crispy_field }}</div>
+                        </div>
+                        {{ form.description|as_crispy_field }}
+                        <div class="alert alert-info" role="alert">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Consejo:</strong> Una buena descripción ayudará a
+                            identificar fácilmente tu item en caso de pérdida.
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-primary" type="submit">
+                                <i class="bi bi-save me-2"></i>Registrar Item
+                            </button>
+                            <a href="{% url 'home' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-2"></i>Volver al Inicio
+                            </a>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
-    </form>
+    </main>
+{% endblock %}
+{% block breadcrumbs %}
+    <li class="breadcrumb-item active" aria-current="page">Registrar Item</li>
 {% endblock %}

@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block content %}
+    <div class="container mt-4">
+        <h2 class="mb-4">Actualizar Suscripción</h2>
+        <div class="row">
+            {% for plan in plans %}
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 {% if plan == current_plan %}border-primary{% endif %}">
+                        <div class="card-header {% if plan == current_plan %}bg-primary text-white{% endif %}">
+                            <h5 class="card-title mb-0">{{ plan.name }}</h5>
+                        </div>
+                        <div class="card-body d-flex flex-column">
+                            <p class="card-text">{{ plan.description }}</p>
+                            <ul class="list-unstyled">
+                                <li><strong>Precio mensual:</strong> ${{ plan.price_monthly }}</li>
+                                <li><strong>Precio anual:</strong> ${{ plan.price_yearly }}</li>
+                                <li><strong>Duración:</strong> {{ plan.duration_days }} días</li>
+                                <li><strong>Notificaciones/mes:</strong> {{ plan.notifications_per_month }}</li>
+                                <li><strong>Máximo de items:</strong> {{ plan.max_items }}</li>
+                                <li><strong>Modificar horas de notificación:</strong>
+                                    {% if plan.can_modify_notification_hours %}Sí{% else %}No{% endif %}</li>
+                                <li><strong>Elegir tipo de notificación:</strong>
+                                    {% if plan.can_choose_notification_type %}Sí{% else %}No{% endif %}</li>
+                            </ul>
+                            <form method="post" class="mt-auto">
+                                {% csrf_token %}
+                                <input type="hidden" name="plan_id" value="{{ plan.id }}">
+                                {% if plan == current_plan %}
+                                    <button type="submit" class="btn btn-secondary" disabled>Plan Actual</button>
+                                {% else %}
+                                    <button type="submit" class="btn btn-primary">Seleccionar Plan</button>
+                                {% endif %}
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endblock %}

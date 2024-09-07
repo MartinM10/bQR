@@ -2,6 +2,8 @@ import os
 import smtplib
 from email.message import EmailMessage
 from io import BytesIO
+from django.utils import timezone
+from datetime import time
 import qrcode
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -14,9 +16,15 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from myApp.config import DOMAIN
 from ownerQR.settings import EMAIL_HOST_USER, EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_PASSWORD
-from myApp.forms import CustomUserCreationForm, FormItem, ChangePasswordForm, ChangeProfilePictureForm, \
-    EditUserProfileForm, ChangeItemPictureForm
+from myApp.forms import ContactForm, CustomUserCreationForm, FormItem, ChangePasswordForm, ChangeProfilePictureForm, \
+    CustomerProfileForm, ChangeItemPictureForm, NotificationPreferenceForm
 from myApp.models import Item, Customer
+from .models import Notification, NotificationPreference, SubscriptionPlan
+from .utils import send_notification
+
+
+def create_notification(user, message):
+    Notification.objects.create(user=user, message=message)
 
 
 def logout_request(request):
@@ -34,7 +42,7 @@ def login_request(request):
             user = authenticate(username=username, password=password)
             if user is not None:
                 login(request, user)
-                messages.info(request, f'You are now logged in as {username}.')
+                # messages.info(request, f'You are now logged in as {username}.')
                 return redirect('home')
             else:
                 messages.error(request, 'Invalid username or password.')
@@ -44,19 +52,35 @@ def login_request(request):
     return render(request=request, template_name='login.html', context={'form': form})
 
 
+@login_required
 def home(request):
-    return render(request, 'home.html')
+    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')[:3]
+    total_notifications = Notification.objects.filter(user=request.user).count()
+    unread_notifications = Notification.objects.filter(user=request.user, is_read=False).count()
+
+    subscription_type = request.user.get_subscription_type()
+    is_premium = subscription_type != "Gratuito"
+
+    context = {
+        'notifications': notifications,
+        'total_notifications': total_notifications,
+        'unread_notifications': unread_notifications,
+        'subscription_type': subscription_type,
+        'is_premium': is_premium,
+    }
+    return render(request, 'home.html', context)
 
 
 @login_required
-def edit_user_profile(request):
+def edit_profile(request):
     if request.method == 'POST':
-        form = EditUserProfileForm(request.POST, instance=request.user)
+        form = CustomerProfileForm(request.POST, instance=request.user)
         if form.is_valid():
             form.save()
-            return redirect('profile')  # Redirige a la página de perfil
+            messages.success(request, 'El perfil se ha actualizado correctamente.')
+            return redirect('home')
     else:
-        form = EditUserProfileForm(instance=request.user)
+        form = CustomerProfileForm(instance=request.user)
 
     return render(request, 'edit_profile.html', {'form': form})
 
@@ -112,114 +136,70 @@ def change_item_picture(request, item_id):
 
 def register_user(request):
     if request.method == 'POST':
-        user_creation_form = CustomUserCreationForm(request.POST)
+        user_creation_form = CustomUserCreationForm(request.POST, request.FILES)
         if user_creation_form.is_valid():
             customer = user_creation_form.save(commit=False)
 
             if 'image' in request.FILES:
                 image = request.FILES['image']
-                # Define la ubicación donde se guardará la imagen
                 image_path = f'images/{customer.username}/profile_images/{image.name}'
-
-                # Guarda la imagen en el sistema de archivos usando default_storage
                 try:
                     default_storage.save(image_path, ContentFile(image.read()))
                 except Exception as e:
                     print("Error al guardar la imagen. Inténtalo de nuevo. ", e.args)
                     return HttpResponseServerError("Error al guardar la imagen. Inténtalo de nuevo.")
-
-                # Asigna la ruta de la imagen al campo correspondiente en el modelo
                 customer.image = image_path
 
             customer.save()
-
             user = authenticate(username=user_creation_form.cleaned_data['username'],
                                 password=user_creation_form.cleaned_data['password1'])
-
+            NotificationPreference.objects.create(user=user)
             login(request, user)
+            messages.success(request, f'Cuenta creada exitosamente para {user.username}')
             return redirect('home')
+        else:
+            messages.error(request, 'Por favor, corrige los errores en el formulario.')
+    else:
+        user_creation_form = CustomUserCreationForm()
 
-    return render(request, 'register.html', context={'form': CustomUserCreationForm})
+    return render(request, 'register.html', {'form': user_creation_form})
 
 
 @login_required
 def register_item(request):
     if request.method == 'POST':
-        form = FormItem(request.POST)
+        form = FormItem(request.POST, request.FILES)
         if form.is_valid():
-            item = form.save(commit=False)
-            item.owner = request.user
-            item.save()
-            owner_uuid = str(request.user.uuid)
-            url = f'{DOMAIN}/scan-qr/{owner_uuid}'
-            # url = f'http://localhost:8000/scan-qr/{owner_uuid}'
+            current_items_count = Item.objects.filter(owner=request.user).count()
+            if current_items_count < request.user.subscription_plan.max_items:
+                item = form.save(commit=False)
+                item.owner = request.user
+                item.save()
 
-            # Verifica que se haya proporcionado una imagen
-            if 'image' in request.FILES:
-                image = request.FILES['image']
+                # Generar el código QR
+                owner_uuid = str(request.user.uuid)
+                url = f'{DOMAIN}/scan-qr/{owner_uuid}'
+                qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
+                qr.add_data(url)
+                qr.make(fit=True)
+                img = qr.make_image(fill_color="black", back_color="white")
 
-                # Verifica que el formato de la imagen sea válido (JPEG o PNG)
-                if not image.content_type.startswith('image'):
-                    return HttpResponseServerError("El formato de la imagen no es válido. Debe ser JPEG o PNG.")
+                # Guardar la imagen del código QR
+                image_io = BytesIO()
+                img.save(image_io, 'PNG')
+                image_file = SimpleUploadedFile(f'{request.user.username}/qr_codes/{item.name}.png',
+                                                image_io.getvalue(), content_type='image/png')
+                item.qrCode = image_file
+                item.save()
 
-                # Define la ubicación donde se guardará la imagen
-                image_path = f'images/{request.user.username}/items/{image.name}'
-
-                # Guarda la imagen en el sistema de archivos usando default_storage
-                try:
-                    default_storage.save(image_path, ContentFile(image.read()))
-                except Exception as e:
-                    print("Error al guardar la imagen. Inténtalo de nuevo. ", e.args)
-                    return HttpResponseServerError("Error al guardar la imagen. Inténtalo de nuevo.")
-
-                # Asigna la ruta de la imagen al campo correspondiente en el modelo
-                item.image = image_path
-
-            item.save()
-
-            # Generar el código QR
-            qr = qrcode.QRCode(
-                version=1,
-                error_correction=qrcode.constants.ERROR_CORRECT_L,
-                box_size=10,
-                border=4,
-            )
-            qr.add_data(url)
-            qr.make(fit=True)
-
-            img = qr.make_image(fill_color="black", back_color="white")
-
-            # Guardar la imagen del código QR en el item
-            image_io = BytesIO()
-            img.save(image_io, 'PNG')
-            image_file = SimpleUploadedFile(f'{request.user.username}/qr_codes/{item.name}.png',
-                                            image_io.getvalue(), content_type='image/png')
-            item.qrCode = image_file
-
-            item.save()
-            return redirect('home')
+                messages.success(request, 'Item registrado exitosamente.')
+                return redirect('home')
+            else:
+                messages.error(request,
+                               'Has alcanzado el límite de items para tu plan actual. Considera actualizar tu plan.')
     else:
         form = FormItem()
     return render(request, 'register_item.html', {'form': form})
-
-
-@login_required()
-def edit_profile(request):
-    customer = get_object_or_404(Customer, uuid=request.user.uuid)
-    if request.method == 'GET':
-        context = {'form': EditUserProfileForm(instance=customer)}
-        return render(request, 'edit_profile.html', context)
-
-    elif request.method == 'POST':
-        form = EditUserProfileForm(request.POST, request.FILES,
-                                   instance=customer)  # Asegúrate de incluir `request.FILES` para manejar la imagen.
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'El perfil se ha actualizado correctamente.')
-            return redirect('home')
-        else:
-            messages.error(request, 'Por favor, corrija los siguientes errores:')
-            return render(request, 'edit_profile.html', {'form': form})
 
 
 @login_required()
@@ -265,41 +245,150 @@ def download_qr(request, item_id):
 def scan_qr(request, owner_id):
     owner = get_object_or_404(Customer, uuid=owner_id)
 
-    mensaje = 'Hola, me pongo en contacto contigo para dejarte un comentario acerca de tu item. Un saludo'
-    subject = 'Alarma ContactQR'
-    success_message = 'Mensaje enviado correctamente. Ya hemos notificado al dueño del QR'
-
-    email_msg = EmailMessage()
-    email_msg['from'] = EMAIL_HOST_USER
-    email_msg['subject'] = subject
-    email_msg['to'] = owner.email
-    email_msg.set_content(mensaje)
-
-    server = smtplib.SMTP(EMAIL_HOST, EMAIL_PORT)
-    server.starttls()
-    server.login(EMAIL_HOST_USER, EMAIL_HOST_PASSWORD)
-    server.send_message(email_msg)
-    server.quit()
-
-    # success = None
-    """
     try:
-        pywhatkit.sendwhatmsg(phone_no=numero_destino, message=mensaje, time_hour=current_time.tm_hour,
-                              time_min=current_time.tm_min + 1, wait_time=8)
-        print("Envio Exitoso!")
-        success = True
-        message = 'El mensaje se envió correctamente. Se ha comunicado al owner'
-    except Exception as e:
-        message = 'Error al intentar comunicar con el owner la imagen. Inténtalo de nuevo.'
-        print('ERROR al intentar comunicar ', e.args)
+        preferences = NotificationPreference.objects.get(user=owner)
+    except NotificationPreference.DoesNotExist:
+        preferences = None
+
+    contact_methods = []
+    if owner.subscription_plan and owner.subscription_plan.name != 'Gratuito' and preferences and preferences.show_contact_info_on_scan:
+        if preferences.email_notifications and owner.email:
+            contact_methods.append(('email', 'Email', owner.email))
+        if preferences.sms_notifications and owner.phone:
+            contact_methods.append(('phone', 'Teléfono', owner.phone))
+        if preferences.whatsapp_notifications and owner.phone:
+            contact_methods.append(('whatsapp', 'WhatsApp', owner.phone))
+
+    if request.method == 'POST':
+        form = ContactForm(request.POST, contact_methods=contact_methods)
+        if form.is_valid():
+            severity = form.cleaned_data['severity']
+            reason = form.cleaned_data['reason']
+            message = form.cleaned_data['message']
+            contact_method = form.cleaned_data.get('contact_method', '')
+
+            full_message = f"Gravedad: {severity}\nMotivo: {reason}\nMétodo de contacto: {contact_method}\nMensaje: {message}"
+
+            if owner.can_receive_notification():
+                if send_notification(owner, full_message, severity, reason):
+                    messages.success(request, 'Mensaje enviado correctamente. Ya hemos notificado al dueño del QR')
+                else:
+                    messages.error(request, 'No se pudo enviar el mensaje. Ocurrió un error inesperado.')
+            else:
+                messages.error(request,
+                               'No se pudo enviar el mensaje. El dueño del QR no puede recibir notificaciones en este momento.')
+
+            return redirect('scan_qr', owner_id=owner_id)
+    else:
+        form = ContactForm(contact_methods=contact_methods)
 
     context = {
-        'success': success,
-        'message': message
+        'owner': owner,
+        'form': form,
+        'contact_methods': contact_methods,
+        'is_premium': owner.subscription_plan and owner.subscription_plan.name != 'Gratuito',
+        'can_modify_notification_hours': owner.subscription_plan and owner.subscription_plan.can_modify_notification_hours if owner.subscription_plan else False,
+        'current_time': timezone.localtime(timezone.now()),
+        'can_receive_notification': owner.can_receive_notification()
     }
-    """
+    return render(request, 'scan_qr.html', context)
+
+
+@login_required
+def upgrade_to_premium(request):
+    plans = SubscriptionPlan.objects.all().order_by('price_monthly')
+
+    if request.method == 'POST':
+        plan_id = request.POST.get('plan_id')
+        plan = get_object_or_404(SubscriptionPlan, id=plan_id)
+
+        # Aquí iría la lógica de pago (por ejemplo, integración con Stripe)
+        # Por ahora, simplemente actualizaremos el estado de la suscripción
+        request.user.update_subscription(plan)
+        messages.success(request, f'¡Felicidades! Has actualizado al plan {plan.name} por {plan.duration_days} días.')
+        return redirect('manage_subscription')
+
     context = {
-        'success': True,
-        'message': success_message
+        'plans': plans,
+        'current_plan': request.user.subscription_plan,
     }
-    return render(request, 'result_send_message.html', context=context)
+    return render(request, 'upgrade_to_premium.html', context)
+
+
+@login_required
+def manage_subscription(request):
+    context = {
+        'current_plan': request.user.subscription_plan,
+        'subscription_end_date': request.user.subscription_end_date,
+        'auto_renew': request.user.auto_renew,
+    }
+    return render(request, 'manage_subscription.html', context)
+
+
+@login_required
+def edit_notification_preferences(request):
+    try:
+        preferences = NotificationPreference.objects.get(user=request.user)
+    except NotificationPreference.DoesNotExist:
+        preferences = NotificationPreference(user=request.user)
+
+    if request.method == 'POST':
+        form = NotificationPreferenceForm(request.POST, instance=preferences, user=request.user)
+        if form.is_valid():
+            notification_schedule = form.cleaned_data.get('notification_schedule')
+            if notification_schedule == '24h':
+                form.instance.notification_start_time = time(0, 0)
+                form.instance.notification_end_time = time(0, 0)
+            elif notification_schedule == 'day':
+                form.instance.notification_start_time = time(8, 0)
+                form.instance.notification_end_time = time(21, 0)
+            elif notification_schedule == 'night':
+                form.instance.notification_start_time = time(21, 0)
+                form.instance.notification_end_time = time(8, 0)
+            # For 'custom', use the times provided in the form
+
+            form.save()
+            messages.success(request, 'Preferencias de notificación actualizadas correctamente.')
+            return redirect('home')
+    else:
+        initial_data = get_initial_notification_schedule(preferences)
+        form = NotificationPreferenceForm(instance=preferences, user=request.user, initial=initial_data)
+
+    return render(request, 'edit_notification_preferences.html', {'form': form})
+
+
+def get_initial_notification_schedule(preferences):
+    start_time = preferences.notification_start_time
+    end_time = preferences.notification_end_time
+
+    if start_time == time(0, 0) and end_time == time(0, 0):
+        return {'notification_schedule': '24h'}
+    elif start_time == time(8, 0) and end_time == time(21, 0):
+        return {'notification_schedule': 'day'}
+    elif start_time == time(21, 0) and end_time == time(8, 0):
+        return {'notification_schedule': 'night'}
+    else:
+        return {'notification_schedule': 'custom'}
+
+
+@login_required
+def view_all_notifications(request):
+    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
+    return render(request, 'view_all_notifications.html', {'notifications': notifications})
+
+
+@login_required
+def mark_notification_as_read(request, notification_id):
+    notification = get_object_or_404(Notification, id=notification_id, user=request.user)
+    notification.is_read = True
+    notification.save()
+    return redirect('home')
+
+
+@login_required
+def toggle_auto_renew(request):
+    if request.method == 'POST':
+        request.user.auto_renew = not request.user.auto_renew
+        request.user.save()
+        messages.success(request, 'La configuración de autorenovación ha sido actualizada.')
+    return redirect('manage_subscription')

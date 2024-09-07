@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% load crispy_forms_filters %}
+
+{% block content %}
+    <div class="container mt-4">
+        <h2>Contactar con el dueño del QR</h2>
+        <p>Hora actual: {{ current_time|time:"H:i" }}</p>
+
+        {% if is_premium %}
+            <ul>
+                {% for method, label, value in contact_methods %}
+                    <h3>Métodos de contacto disponibles:</h3>
+                    <li>{{ label }}: {{ value }}</li>
+                {% endfor %}
+            </ul>
+            {% if can_modify_notification_hours %}
+                <p>Horario de notificaciones: {{ owner.notificationpreference.notification_start_time|time:"H:i" }}
+                    - {{ owner.notificationpreference.notification_end_time|time:"H:i" }}</p>
+            {% endif %}
+        {% endif %}
+
+        {% if can_receive_notification %}
+            <form method="post">
+                {% csrf_token %}
+                {{ form.severity|as_crispy_field }}
+                {{ form.reason|as_crispy_field }}
+                {% if is_premium %}
+                    {{ form.contact_method|as_crispy_field }}
+                {% endif %}
+                {{ form.message|as_crispy_field }}
+                <button type="submit" class="btn btn-primary">Enviar mensaje</button>
+            </form>
+        {% else %}
+            <div class="alert alert-warning text-center" style="font-size: 1.2em;">
+                <strong>Aviso:</strong> El dueño del QR no está disponible para recibir notificaciones en este momento.
+                <br>Por favor, intente nuevamente durante el horario de notificaciones establecido.
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

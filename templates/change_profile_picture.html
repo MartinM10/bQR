@@ -11,6 +11,7 @@
                     <form method="post" enctype="multipart/form-data">
                         {% csrf_token %}
                         {{ form|crispy }}
+                        <small class="form-text text-muted">Formatos soportados: JPEG, PNG, WEBP</small>
                         <div class="d-flex justify-content-center align-items-center mt-3">
                             <button class="btn btn-primary" type="submit">Guardar</button>
                         </div>
