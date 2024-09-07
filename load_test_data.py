@@ -7,7 +7,7 @@ import qrcode
 from django.core.files.uploadedfile import SimpleUploadedFile
 from myApp.config import DOMAIN
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ownerQR.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'beQR.settings')
 django.setup()
 
 from django.utils import timezone

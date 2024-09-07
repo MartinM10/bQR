@@ -6,7 +6,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 import qrcode
-from ownerQR.settings import MEDIA_URL, STATIC_URL
+from beQR.settings import MEDIA_URL, STATIC_URL
 from django.utils import timezone
 
 

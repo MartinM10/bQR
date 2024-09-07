@@ -15,7 +15,7 @@ from django.http import HttpResponseServerError, HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from myApp.config import DOMAIN
-from ownerQR.settings import EMAIL_HOST_USER, EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_PASSWORD
+from beQR.settings import EMAIL_HOST_USER, EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_PASSWORD
 from myApp.forms import ContactForm, CustomUserCreationForm, FormItem, ChangePasswordForm, ChangeProfilePictureForm, \
     CustomerProfileForm, ChangeItemPictureForm, NotificationPreferenceForm
 from myApp.models import Item, Customer

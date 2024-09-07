@@ -19,4 +19,4 @@ COPY . /code/
 RUN python manage.py collectstatic --noinput
 
 # Run gunicorn
-CMD gunicorn ownerQR.wsgi:application --bind 0.0.0.0:8000
+CMD gunicorn beQR.wsgi:application --bind 0.0.0.0:8000
