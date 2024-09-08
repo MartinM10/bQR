@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% load crispy_forms_filters %}
+{% load crispy_forms_tags %}
+{% load socialaccount %}
+{% block content %}
+    <main class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <article class="card shadow">
+                    <header class="card-header bg-primary text-white">
+                        <h1 class="h4 mb-0">Iniciar Sesión</h1>
+                    </header>
+                    <div class="card-body">
+                        <form method="post">
+                            {% csrf_token %}
+                            {{ form|crispy }}
+                            <div class="d-grid gap-2 mt-3">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-box-arrow-in-right me-2"></i>Iniciar Sesión
+                                </button>
+                            </div>
+                        </form>
+
+                        <hr>
+
+                        <!-- Incluir opciones de inicio de sesión con redes sociales -->
+                        <div class="social-login d-grid gap-2 mt-3">
+                            <a href="{% provider_login_url 'google' %}" class="btn btn-outline-danger">
+                                <i class="bi bi-google me-2"></i> Iniciar sesión con Google
+                            </a>
+                        </div>
+
+                        <p class="text-center mt-3">¿No tienes una cuenta? <a href="{% url 'register' %}">Regístrate
+                            aquí</a></p>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </main>
+{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item active" aria-current="page">Iniciar Sesión</li>
+{% endblock %}

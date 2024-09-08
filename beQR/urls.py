@@ -29,4 +29,5 @@ urlpatterns = [
                   path('notifications/mark-as-read/<int:notification_id>/', views.mark_notification_as_read,
                        name='mark_notification_as_read'),
                   path('toggle-auto-renew/', views.toggle_auto_renew, name='toggle_auto_renew'),
+                  path('accounts/', include('allauth.urls')),
               ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

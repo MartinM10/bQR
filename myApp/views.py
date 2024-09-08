@@ -49,7 +49,7 @@ def login_request(request):
         else:
             messages.error(request, 'Invalid username or password.')
     form = AuthenticationForm()
-    return render(request=request, template_name='login.html', context={'form': form})
+    return render(request=request, template_name='account/login.html', context={'form': form})
 
 
 @login_required
@@ -97,11 +97,11 @@ def change_password(request):
     else:
         form = ChangePasswordForm(request.user)
 
-    return render(request, 'change_password.html', {'form': form})
+    return render(request, 'account/password_reset.html', {'form': form})
 
 
 def password_change_success_view(request):
-    return render(request, 'password_change_success.html')
+    return render(request, 'account/password_change_success.html')
 
 
 @login_required
@@ -162,7 +162,7 @@ def register_user(request):
     else:
         user_creation_form = CustomUserCreationForm()
 
-    return render(request, 'register.html', {'form': user_creation_form})
+    return render(request, 'account/signup.html', {'form': user_creation_form})
 
 
 @login_required
