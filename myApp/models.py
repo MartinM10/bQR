@@ -131,7 +131,7 @@ class Item(models.Model):
     name = models.CharField(max_length=150)
     description = models.TextField(null=True, blank=True)
     image = models.ImageField(upload_to=upload_to_items, null=True, blank=True)
-    qrCode = models.ImageField(upload_to=upload_to_qr, null=True, blank=True)
+    qrCode = models.ImageField(upload_to='qr_codes/', blank=True, null=True)
 
     REQUIRED_FIELDS = ["name"]
 

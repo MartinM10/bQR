@@ -20,7 +20,7 @@ from myApp.forms import ContactForm, CustomUserCreationForm, FormItem, ChangePas
     CustomerProfileForm, ChangeItemPictureForm, NotificationPreferenceForm
 from myApp.models import Item, Customer
 from .models import Notification, NotificationPreference, SubscriptionPlan
-from .utils import send_notification
+from .utils import send_notification, generate_styled_qr
 from allauth.account.utils import send_email_confirmation
 
 
@@ -172,18 +172,10 @@ def register_item(request):
                 # Generar el código QR
                 owner_uuid = str(request.user.uuid)
                 url = f'{DOMAIN}/scan-qr/{owner_uuid}'
-                qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
-                qr.add_data(url)
-                qr.make(fit=True)
-                img = qr.make_image(fill_color="black", back_color="white")
+                qr_image = generate_styled_qr(url, item.name)
 
                 # Guardar la imagen del código QR
-                image_io = BytesIO()
-                img.save(image_io, 'PNG')
-                image_file = SimpleUploadedFile(f'{request.user.username}/qr_codes/{item.name}.png',
-                                                image_io.getvalue(), content_type='image/png')
-                item.qrCode = image_file
-                item.save()
+                item.qrCode.save(f'{item.name}_qr.png', ContentFile(qr_image), save=True)
 
                 messages.success(request, 'Item registrado exitosamente.')
                 return redirect('home')
