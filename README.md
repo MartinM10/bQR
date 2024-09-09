@@ -1,8 +1,8 @@
-# 🔒 bQR: Tus cosas, tu seguridad, tu QR 🔒
+# 🔒 beQR: Tus cosas, tu seguridad, tu QR 🔒
 
-## 📱 ¿Qué es bQR?
+## 📱 ¿Qué es beQR?
 
-bQR es una innovadora aplicación web que te permite proteger tus pertenencias mediante códigos QR personalizados. Con bQR, puedes:
+beQR es una innovadora aplicación web que te permite proteger tus pertenencias mediante códigos QR personalizados. Con beQR, puedes:
 
 - 🏷️ Crear etiquetas QR únicas para tus objetos valiosos
 - 📢 Recibir notificaciones si alguien encuentra tus pertenencias perdidas
@@ -29,8 +29,8 @@ bQR es una innovadora aplicación web que te permite proteger tus pertenencias m
 
 1. Clona el repositorio:
    ```
-   git clone https://github.com/tu-usuario/bQR.git
-   cd bQR
+   git clone https://github.com/tu-usuario/beQR.git
+   cd beQR
    ```
 
 2. Crea y activa un entorno virtual (opcional):
@@ -97,7 +97,7 @@ bQR es una innovadora aplicación web que te permite proteger tus pertenencias m
 2. Crea un nuevo item y genera su código QR.
 3. Imprime o guarda el código QR y colócalo en tu objeto.
 4. Configura tus preferencias de notificación.
-5. ¡Listo! Ahora tus objetos están protegidos con bQR.
+5. ¡Listo! Ahora tus objetos están protegidos con beQR.
 
 ## 🤝 Contribuir
 
@@ -117,10 +117,10 @@ Este proyecto está bajo la licencia MIT. Consulta el archivo `LICENSE` para má
 
 Si tienes alguna pregunta o sugerencia, no dudes en contactarnos:
 
-- 📧 Email: support@bqr.com
-- 🌐 Sitio web: https://www.bqr.com
-- 🐦 Twitter: @bQR_official
+- 📧 Email: support@beQR.com
+- 🌐 Sitio web: https://www.beQR.com
+- 🐦 Twitter: @beQR_official
 
 ---
 
-Hecho con ❤️ por el equipo de bQR
+Hecho con ❤️ por el equipo de beQR
