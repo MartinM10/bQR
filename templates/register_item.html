@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 {% load crispy_forms_filters %}
 {% block content %}
-    <main class="row justify-content-center">
+    <section class="row justify-content-center">
         <div class="col-md-8">
             <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Registrar Nuevo Item</h5>
-                </div>
+                <header class="card-header bg-primary text-white">
+                    <h2 class="h5 mb-0">Registrar Nuevo Item</h2>
+                </header>
                 <div class="card-body">
                     <form action="" method="post" enctype="multipart/form-data">
                         {% csrf_token %}
@@ -32,7 +32,7 @@
                 </div>
             </div>
         </div>
-    </main>
+    </section>
 {% endblock %}
 {% block breadcrumbs %}
     <li class="breadcrumb-item active" aria-current="page">Registrar Item</li>

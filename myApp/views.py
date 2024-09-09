@@ -21,6 +21,7 @@ from myApp.forms import ContactForm, CustomUserCreationForm, FormItem, ChangePas
 from myApp.models import Item, Customer
 from .models import Notification, NotificationPreference, SubscriptionPlan
 from .utils import send_notification
+from allauth.account.utils import send_email_confirmation
 
 
 def create_notification(user, message):
@@ -134,28 +135,20 @@ def change_item_picture(request, item_id):
     return render(request, 'change_item_picture.html', {'form': form})
 
 
-def register_user(request):
+def register(request):
     if request.method == 'POST':
-        user_creation_form = CustomUserCreationForm(request.POST, request.FILES)
-        if user_creation_form.is_valid():
-            customer = user_creation_form.save(commit=False)
-
-            if 'image' in request.FILES:
-                image = request.FILES['image']
-                image_path = f'images/{customer.username}/profile_images/{image.name}'
-                try:
-                    default_storage.save(image_path, ContentFile(image.read()))
-                except Exception as e:
-                    print("Error al guardar la imagen. Inténtalo de nuevo. ", e.args)
-                    return HttpResponseServerError("Error al guardar la imagen. Inténtalo de nuevo.")
-                customer.image = image_path
-
-            customer.save()
-            user = authenticate(username=user_creation_form.cleaned_data['username'],
-                                password=user_creation_form.cleaned_data['password1'])
-            NotificationPreference.objects.create(user=user)
-            login(request, user)
-            messages.success(request, f'Cuenta creada exitosamente para {user.username}')
+        form = CustomUserCreationForm(request.POST, request.FILES)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.email_verified = user.socialaccount_set.filter(provider='google').exists()
+            user.save()
+            
+            if not user.email_verified:
+                send_email_confirmation(request, user)
+                messages.info(request, 'Por favor, verifica tu correo electrónico para completar el registro.')
+            else:
+                messages.success(request, 'Registro completado con éxito.')
+            
             return redirect('home')
         else:
             messages.error(request, 'Por favor, corrige los errores en el formulario.')

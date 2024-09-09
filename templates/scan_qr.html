@@ -2,7 +2,7 @@
 {% load crispy_forms_filters %}
 
 {% block content %}
-    <div class="container mt-4">
+    <section class="container mt-4">
         <h2>Contactar con el dueño del QR</h2>
         <p>Hora actual: {{ current_time|time:"H:i" }}</p>
 
@@ -36,5 +36,5 @@
                 <br>Por favor, intente nuevamente durante el horario de notificaciones establecido.
             </div>
         {% endif %}
-    </div>
+    </section>
 {% endblock %}

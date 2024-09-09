@@ -5,7 +5,7 @@ from datetime import timedelta
 from io import BytesIO
 import qrcode
 from django.core.files.uploadedfile import SimpleUploadedFile
-from myApp.config import DOMAIN
+from myApp.config import DOMAIN, PLANS
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'beQR.settings')
 django.setup()
@@ -16,52 +16,16 @@ from myApp.models import SubscriptionPlan, Item, NotificationPreference, Notific
 
 Customer = get_user_model()
 
-
 def create_subscription_plans():
-    plans = [
-        {
-            'name': 'Gratuito',
-            'price_monthly': 0,
-            'price_yearly': 0,
-            'duration_days': 365,
-            'notifications_per_month': 3,
-            'max_items': 1,
-            'can_modify_notification_hours': False,
-            'can_choose_notification_type': False,
-            'description': 'Plan básico gratuito'
-        },
-        {
-            'name': 'Estándar',
-            'price_monthly': 10,
-            'price_yearly': 100,
-            'duration_days': 30,
-            'notifications_per_month': 15,
-            'max_items': 3,
-            'can_modify_notification_hours': True,
-            'can_choose_notification_type': False,
-            'description': 'Plan estándar con más funcionalidades'
-        },
-        {
-            'name': 'Premium',
-            'price_monthly': 35,
-            'price_yearly': 320,
-            'duration_days': 30,
-            'notifications_per_month': 1000000,  # Un número muy alto para simular "ilimitado"
-            'max_items': 1000000,  # Un número muy alto para simular "ilimitado"
-            'can_modify_notification_hours': True,
-            'can_choose_notification_type': True,
-            'description': 'Plan premium sin límites'
-        },
-    ]
-
-    for plan_data in plans:
-        SubscriptionPlan.objects.create(**plan_data)
-
-    print("Planes de suscripción creados.")
-
+    for plan_name, plan_data in PLANS.items():
+        SubscriptionPlan.objects.update_or_create(
+            name=plan_name,
+            defaults=plan_data
+        )
+    print("Planes de suscripción creados o actualizados.")
 
 def create_customers():
-    plans = SubscriptionPlan.objects.all()
+    plans = list(SubscriptionPlan.objects.all())
     customers = [
         {
             'username': 'usuario1',
@@ -93,9 +57,8 @@ def create_customers():
     ]
 
     for i, customer_data in enumerate(customers):
-        username = customer_data['username']
         customer, created = Customer.objects.update_or_create(
-            username=username,
+            username=customer_data['username'],
             defaults=customer_data
         )
         if created:
@@ -106,7 +69,6 @@ def create_customers():
         customer.save()
 
     print("Clientes creados o actualizados.")
-
 
 def create_items():
     customers = Customer.objects.all()
@@ -129,7 +91,6 @@ def create_items():
             )
 
             if created or not item.qrCode:
-                # Generar el código QR solo si es un nuevo item o si no tiene QR
                 owner_uuid = str(customer.uuid)
                 url = f'{DOMAIN}/scan-qr/{owner_uuid}'
                 qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
@@ -137,7 +98,6 @@ def create_items():
                 qr.make(fit=True)
                 img = qr.make_image(fill_color="black", back_color="white")
 
-                # Guardar la imagen del código QR
                 image_io = BytesIO()
                 img.save(image_io, 'PNG')
                 image_file = SimpleUploadedFile(f'{customer.username}/qr_codes/{item.name}.png',
@@ -146,7 +106,6 @@ def create_items():
                 item.save()
 
     print("Items creados o actualizados respetando los límites del plan y con códigos QR generados.")
-
 
 def create_notification_preferences():
     customers = Customer.objects.all()
@@ -169,7 +128,6 @@ def create_notification_preferences():
 
     print("Preferencias de notificación creadas o actualizadas.")
 
-
 def create_notifications():
     customers = Customer.objects.all()
     severity_choices = ['low', 'medium', 'high', 'urgent']
@@ -186,7 +144,6 @@ def create_notifications():
             )
 
     print("Notificaciones creadas.")
-
 
 if __name__ == '__main__':
     create_subscription_plans()

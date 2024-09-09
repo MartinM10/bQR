@@ -53,6 +53,8 @@ class Customer(AbstractUser):
     conditionsAccepted = models.BooleanField(default=False)
     public_profile = models.BooleanField(default=False)
     email = models.EmailField(blank=True, null=True)
+    email_verified = models.BooleanField(default=False)
+    google_picture = models.URLField(max_length=255, blank=True, null=True)
 
     REQUIRED_FIELDS = ["email", "phone"]
 

@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <header class="card-header bg-warning text-dark">
+                        <h2 class="h4 mb-0">{% trans "Login Cancelled" %}</h2>
+                    </header>
+                    <div class="card-body">
+                        <p>Decidiste cancelar tu registro en nuestro sitio usando una de tus cuentas existentes. Si esto
+                            fue un error, por favor, vuelve a iniciar sesión.</p>
+                    </div>
+                    <footer class="card-footer">
+                        <a href="{% url 'account_login' %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Volver al Login
+                        </a>
+                    </footer>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

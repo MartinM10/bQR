@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 import os
 from pathlib import Path
-from myApp.config import DEBUG, DOMAIN, USER_EMAIL, PASSWORD_EMAIL, SECRET_KEY
+from myApp.config import DEBUG, DOMAIN, USER_EMAIL, PASSWORD_EMAIL, SECRET_KEY, GOOGLE_CLIENT_ID, GOOGLE_SECRET, PLANS
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -53,6 +53,9 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
 ]
+
+SOCIALACCOUNT_ADAPTER = 'myApp.adapters.CustomSocialAccountAdapter'
+
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'SCOPE': [
@@ -74,7 +77,10 @@ SOCIALACCOUNT_PROVIDERS = {
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
-SITE_ID = 2
+GOOGLE_CLIENT_ID = GOOGLE_CLIENT_ID
+GOOGLE_SECRET = GOOGLE_SECRET
+
+SITE_ID = 1  # Este valor será sobrescrito por la señal
 
 # SOCIALACCOUNT_LOGIN_ON_GET = True # SIRVE PARA SALTARSE EL PASO DE AVISO QUE VAS A SALIR A GOOGLE
 
