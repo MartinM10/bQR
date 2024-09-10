@@ -1,27 +1,26 @@
 import os
-import smtplib
-from email.message import EmailMessage
-from io import BytesIO
 from django.utils import timezone
 from datetime import time
-import qrcode
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.core.files.base import ContentFile
-from django.core.files.storage import default_storage
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.http import HttpResponseServerError, HttpResponse
+from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
-from myApp.config import DOMAIN
-from beQR.settings import EMAIL_HOST_USER, EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_PASSWORD
+from beQR import settings
+from myApp.config import DOMAIN, ORGANIZATION_EMAIL
 from myApp.forms import ContactForm, CustomUserCreationForm, FormItem, ChangePasswordForm, ChangeProfilePictureForm, \
-    CustomerProfileForm, ChangeItemPictureForm, NotificationPreferenceForm
+    ChangeItemPictureForm, NotificationPreferenceForm, EditProfileForm
 from myApp.models import Item, Customer
 from .models import Notification, NotificationPreference, SubscriptionPlan
 from .utils import send_notification, generate_styled_qr
-from allauth.account.utils import send_email_confirmation
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.core.mail import send_mail
+from django.urls import reverse
+from django.contrib.auth.hashers import make_password
 
 
 def create_notification(user, message):
@@ -60,7 +59,10 @@ def home(request):
     unread_notifications = Notification.objects.filter(user=request.user, is_read=False).count()
 
     subscription_type = request.user.get_subscription_type()
-    is_premium = subscription_type != "Gratuito"
+    is_premium = subscription_type != "FREE"
+
+    print("URL DE LA IMAGEN: ", request.user.image)
+    print("GOOGLE IMAGEN: ", request.user.google_picture_url)
 
     context = {
         'notifications': notifications,
@@ -75,14 +77,13 @@ def home(request):
 @login_required
 def edit_profile(request):
     if request.method == 'POST':
-        form = CustomerProfileForm(request.POST, instance=request.user)
+        form = EditProfileForm(request.POST, request.FILES, instance=request.user)
         if form.is_valid():
             form.save()
-            messages.success(request, 'El perfil se ha actualizado correctamente.')
+            messages.success(request, 'Perfil actualizado con éxito.')
             return redirect('home')
     else:
-        form = CustomerProfileForm(instance=request.user)
-
+        form = EditProfileForm(instance=request.user)
     return render(request, 'edit_profile.html', {'form': form})
 
 
@@ -140,22 +141,69 @@ def register(request):
         form = CustomUserCreationForm(request.POST, request.FILES)
         if form.is_valid():
             user = form.save(commit=False)
-            user.email_verified = user.socialaccount_set.filter(provider='google').exists()
+            user.email_verified = not settings.REQUIRE_EMAIL_VERIFICATION
+            user.password = make_password(form.cleaned_data['password1'])
+
+            # Assign the free plan by default
+            free_plan = SubscriptionPlan.objects.get(name='FREE')
+            user.subscription_plan = free_plan
+
             user.save()
-            
-            if not user.email_verified:
-                send_email_confirmation(request, user)
+
+            if settings.REQUIRE_EMAIL_VERIFICATION and not user.email_verified:
+                send_verification_email(request, user)
                 messages.info(request, 'Por favor, verifica tu correo electrónico para completar el registro.')
             else:
                 messages.success(request, 'Registro completado con éxito.')
-            
+
+            # Authenticate and login the user
+            user = authenticate(username=form.cleaned_data['username'],
+                                password=form.cleaned_data['password1'],
+                                backend='django.contrib.auth.backends.ModelBackend')
+            if user is not None:
+                login(request, user)
+
             return redirect('home')
         else:
             messages.error(request, 'Por favor, corrige los errores en el formulario.')
     else:
-        user_creation_form = CustomUserCreationForm()
+        form = CustomUserCreationForm()
 
-    return render(request, 'account/signup.html', {'form': user_creation_form})
+    return render(request, 'account/signup.html', {'form': form})
+
+
+def send_verification_email(request, user):
+    if not settings.REQUIRE_EMAIL_VERIFICATION:
+        return
+
+    token = default_token_generator.make_token(user)
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    verification_link = request.build_absolute_uri(reverse('verify_email', kwargs={'uidb64': uid, 'token': token}))
+    subject = 'Verify your email'
+    message = f'Please click the link to verify your email: {verification_link}'
+    from_email = ORGANIZATION_EMAIL
+    send_mail(subject, message, from_email, [user.email], fail_silently=False)
+
+
+def verify_email(request, uidb64, token):
+    if not settings.REQUIRE_EMAIL_VERIFICATION:
+        messages.info(request, 'Email verification is not required.')
+        return redirect('home')
+
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = Customer.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, Customer.DoesNotExist):
+        user = None
+
+    if user is not None and default_token_generator.check_token(user, token):
+        user.email_verified = True
+        user.save()
+        messages.success(request, 'Your email has been verified.')
+    else:
+        messages.error(request, 'The verification link was invalid or has expired.')
+
+    return redirect('home')
 
 
 @login_required
@@ -167,15 +215,21 @@ def register_item(request):
             if current_items_count < request.user.subscription_plan.max_items:
                 item = form.save(commit=False)
                 item.owner = request.user
+
+                # Save the item image
+                if 'image' in request.FILES:
+                    item.image = request.FILES['image']
+
                 item.save()
 
-                # Generar el código QR
+                # Generate the QR code
                 owner_uuid = str(request.user.uuid)
                 url = f'{DOMAIN}/scan-qr/{owner_uuid}'
                 qr_image = generate_styled_qr(url, item.name)
 
-                # Guardar la imagen del código QR
-                item.qrCode.save(f'{item.name}_qr.png', ContentFile(qr_image), save=True)
+                # Save the QR code image
+                qr_filename = f'{item.name}_qr.png'
+                item.qrCode.save(qr_filename, ContentFile(qr_image), save=True)
 
                 messages.success(request, 'Item registrado exitosamente.')
                 return redirect('home')
@@ -236,13 +290,14 @@ def scan_qr(request, owner_id):
         preferences = None
 
     contact_methods = []
-    if owner.subscription_plan and owner.subscription_plan.name != 'Gratuito' and preferences and preferences.show_contact_info_on_scan:
-        if preferences.email_notifications and owner.email:
-            contact_methods.append(('email', 'Email', owner.email))
-        if preferences.sms_notifications and owner.phone:
-            contact_methods.append(('phone', 'Teléfono', owner.phone))
-        if preferences.whatsapp_notifications and owner.phone:
-            contact_methods.append(('whatsapp', 'WhatsApp', owner.phone))
+    show_contact_info = preferences and preferences.show_contact_info_on_scan
+    if owner.subscription_plan and owner.subscription_plan.name != 'FREE':
+        if preferences.email_notifications:
+            contact_methods.append(('email', 'Email', owner.email if show_contact_info else None))
+        if preferences.sms_notifications:
+            contact_methods.append(('phone', 'Teléfono', owner.phone if show_contact_info else None))
+        if preferences.whatsapp_notifications:
+            contact_methods.append(('whatsapp', 'WhatsApp', owner.phone if show_contact_info else None))
 
     if request.method == 'POST':
         form = ContactForm(request.POST, contact_methods=contact_methods)
@@ -271,10 +326,11 @@ def scan_qr(request, owner_id):
         'owner': owner,
         'form': form,
         'contact_methods': contact_methods,
-        'is_premium': owner.subscription_plan and owner.subscription_plan.name != 'Gratuito',
+        'is_premium': owner.subscription_plan and owner.subscription_plan.name != 'FREE',
         'can_modify_notification_hours': owner.subscription_plan and owner.subscription_plan.can_modify_notification_hours if owner.subscription_plan else False,
         'current_time': timezone.localtime(timezone.now()),
-        'can_receive_notification': owner.can_receive_notification()
+        'can_receive_notification': owner.can_receive_notification(),
+        'show_contact_info': show_contact_info
     }
     return render(request, 'scan_qr.html', context)
 

@@ -7,6 +7,7 @@ from myApp.config import PLANS
 from myApp.models import SubscriptionPlan
 from django.contrib.auth import get_user_model
 
+
 @receiver(post_migrate)
 def initialize_site_and_social_app(sender, **kwargs):
     # Configurar el sitio
@@ -14,7 +15,7 @@ def initialize_site_and_social_app(sender, **kwargs):
         domain=settings.DOMAIN,
         defaults={'name': 'beQR'}
     )
-    
+
     # Actualizar SITE_ID en la configuración
     settings.SITE_ID = site.id
 
@@ -25,7 +26,7 @@ def initialize_site_and_social_app(sender, **kwargs):
         client_id=settings.GOOGLE_CLIENT_ID,
         secret=settings.GOOGLE_SECRET
     )
-    
+
     # Añadir el sitio a la aplicación social si no está ya asociado
     if site not in social_app.sites.all():
         social_app.sites.add(site)
@@ -52,6 +53,7 @@ def initialize_site_and_social_app(sender, **kwargs):
         user.save()
 
     print(f"Inicialización completada: Sitio (ID: {site.id}), Google Social App y Plan Gratuito configurados.")
+
 
 @receiver(post_migrate)
 def create_subscription_plans(sender, **kwargs):

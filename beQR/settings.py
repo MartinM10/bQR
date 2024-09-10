@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 import os
 from pathlib import Path
-from myApp.config import DEBUG, DOMAIN, USER_EMAIL, PASSWORD_EMAIL, SECRET_KEY, GOOGLE_CLIENT_ID, GOOGLE_SECRET, PLANS
+from myApp.config import DEBUG, DOMAIN, ORGANIZATION_EMAIL, PASSWORD_EMAIL, SECRET_KEY, GOOGLE_CLIENT_ID, GOOGLE_SECRET
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -195,10 +195,13 @@ AUTH_USER_MODEL = 'myApp.Customer'
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
-EMAIL_HOST_USER = USER_EMAIL
+EMAIL_HOST_USER = ORGANIZATION_EMAIL
 EMAIL_HOST_PASSWORD = PASSWORD_EMAIL
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
+
+# Email verification
+REQUIRE_EMAIL_VERIFICATION = False
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
@@ -213,3 +216,5 @@ CSRF_COOKIE_SECURE = True
 # SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 # SECURE_HSTS_PRELOAD = True
 # SECURE_CONTENT_TYPE_NOSNIFF = True
+
+DOWNLOAD_SOCIAL_PROFILE_PICTURE = False  # Set to True if you want to download and store the image

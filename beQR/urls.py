@@ -31,4 +31,5 @@ urlpatterns = [
                        name='mark_notification_as_read'),
                   path('toggle-auto-renew/', views.toggle_auto_renew, name='toggle_auto_renew'),
                   path('accounts/', include('allauth.urls')),
+                  path('verify-email/<uidb64>/<token>/', views.verify_email, name='verify_email'),
               ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

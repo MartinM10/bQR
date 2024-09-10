@@ -1,9 +1,5 @@
 from django.core.mail import send_mail
-from django.conf import settings
 from myApp.models import Notification, NotificationPreference
-
-# Importa aquí las funciones necesarias para enviar SMS y notificaciones push
-
 import qrcode
 from qrcode.image.styledpil import StyledPilImage
 from qrcode.image.styles.moduledrawers import RoundedModuleDrawer
@@ -11,6 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 import io
 import os
 from django.conf import settings
+
 
 def send_notification(user, message, severity, reason):
     if not user.can_receive_notification():
@@ -65,6 +62,7 @@ def send_notification(user, message, severity, reason):
         notification.delete()
         return False
 
+
 def generate_styled_qr(data, item_name):
     # Crear el código QR
     qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
@@ -77,7 +75,7 @@ def generate_styled_qr(data, item_name):
 
     # Cargar la imagen de fondo
     background = Image.open(os.path.join(settings.STATIC_ROOT, 'images', 'qr_background.png')).convert("RGBA")
-    
+
     # Redimensionar el código QR para que quepa en el centro de la imagen de fondo
     qr_size = min(background.size) // 2
     qr_img = qr_img.resize((qr_size, qr_size))

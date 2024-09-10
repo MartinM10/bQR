@@ -7,10 +7,15 @@
         <p>Hora actual: {{ current_time|time:"H:i" }}</p>
 
         {% if is_premium %}
+            <h3>Métodos de contacto disponibles:</h3>
             <ul>
                 {% for method, label, value in contact_methods %}
-                    <h3>Métodos de contacto disponibles:</h3>
-                    <li>{{ label }}: {{ value }}</li>
+                    <li>
+                        {{ label }}
+                        {% if show_contact_info and value %}
+                            : {{ value }}
+                        {% endif %}
+                    </li>
                 {% endfor %}
             </ul>
             {% if can_modify_notification_hours %}

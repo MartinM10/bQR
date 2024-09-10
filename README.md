@@ -16,6 +16,7 @@ beQR es una innovadora aplicación web que te permite proteger tus pertenencias 
 - 🔔 Sistema de notificaciones configurable
 - 👤 Perfiles de usuario personalizables
 - 🌙 Modo oscuro para una mejor experiencia visual
+- 🔑 Integración con inicio de sesión de Google
 
 ## 🛠️ Instalación y despliegue
 
@@ -45,7 +46,7 @@ beQR es una innovadora aplicación web que te permite proteger tus pertenencias 
    ```
 
 4. Configura las variables de entorno:
-   modifica el nombre del fichero `.env.template` en la raíz del proyecto y llamalo `.env`; Establece los valores de las variables que se utilizan en el proyecto.
+   modifica el nombre del fichero `.env.template` en la raíz del proyecto y llámalo `.env`; Establece los valores de las variables que se utilizan en el proyecto.
    Por ejemplo estas son algunas de las variables:
    ```
    SECRET_KEY=tu_clave_secreta
@@ -91,9 +92,39 @@ beQR es una innovadora aplicación web que te permite proteger tus pertenencias 
 
 8. Visita `http://localhost:8000` en tu navegador para ver la aplicación en funcionamiento.
 
+## 🔧 Configuraciones importantes
+
+### Verificación de correo electrónico
+
+En el archivo `settings.py`, encontrarás la siguiente configuración:
+
+
+```python
+REQUIRE_EMAIL_VERIFICATION = False
+```
+
+Esta configuración controla si se requiere la verificación del correo electrónico al registrarse:
+
+- Si se establece en `True`, los usuarios deberán verificar su dirección de correo electrónico antes de poder iniciar sesión y utilizar la aplicación.
+- Si se establece en `False` (valor por defecto), los usuarios podrán acceder a la aplicación inmediatamente después de registrarse, sin necesidad de verificar su correo electrónico.
+
+### Integración con Google
+
+Se ha añadido la integración con el inicio de sesión de Google. Asegúrate de configurar correctamente las variables `GOOGLE_CLIENT_ID` y `GOOGLE_SECRET` en tu archivo `.env`.
+
+### Planes de suscripción
+
+beQR ofrece tres planes de suscripción:
+
+1. Plan Free: Funcionalidades básicas para usuarios que quieren probar el servicio.
+2. Plan Premium: Funcionalidades avanzadas para usuarios que necesitan más opciones de personalización.
+3. Plan Pro: Todas las funcionalidades disponibles, ideal para usuarios que requieren un control total sobre sus QR y notificaciones.
+
+Los detalles de cada plan (precio, duración, número de notificaciones, etc.) se pueden configurar en el archivo `.env`.
+
 ## 🌟 Uso
 
-1. Regístrate o inicia sesión en la aplicación.
+1. Regístrate o inicia sesión en la aplicación (también puedes usar tu cuenta de Google).
 2. Crea un nuevo item y genera su código QR.
 3. Imprime o guarda el código QR y colócalo en tu objeto.
 4. Configura tus preferencias de notificación.

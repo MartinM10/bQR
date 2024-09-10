@@ -1,7 +1,6 @@
 from io import BytesIO
 from myApp.config import DOMAIN
 from myApp.models import Customer, Item, Notification
-
 import qrcode
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import serializers

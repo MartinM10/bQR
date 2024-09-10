@@ -81,6 +81,12 @@ class ChangeItemPictureForm(forms.ModelForm):
         fields = ['image']
 
 
+class EditProfileForm(forms.ModelForm):
+    class Meta:
+        model = Customer
+        fields = ['username', 'email', 'first_name', 'last_name', 'phone', 'gender', 'image']
+
+
 class CustomerProfileForm(forms.ModelForm):
     class Meta:
         model = Customer

@@ -6,7 +6,8 @@
                 <div class="card-body d-flex align-items-center">
                     <figure class="user-image-container me-4">
                         <a href="{% url 'change_profile_picture' %}" title="Cambiar imagen de perfil">
-                            <img src="{{ request.user.get_image }}" class="user-image rounded-circle" width="100" alt="User Image" />
+                            <img src="{{ request.user.get_image }}" class="user-image rounded-circle" width="100"
+                                 alt="User Image"/>
                         </a>
                     </figure>
                     <div>
@@ -120,7 +121,8 @@
                                                     <strong class="text-muted">Mensaje:</strong>
                                                     {{ notification.message }}
                                                 </p>
-                                                <time class="text-muted" datetime="{{ notification.created_at|date:'Y-m-d H:i' }}">
+                                                <time class="text-muted"
+                                                      datetime="{{ notification.created_at|date:'Y-m-d H:i' }}">
                                                     <strong>Fecha:</strong> {{ notification.created_at|date:"d/m/Y H:i" }}
                                                 </time>
                                             </div>
@@ -147,36 +149,39 @@
                             <div class="table-responsive">
                                 <table class="table table-hover align-middle">
                                     <thead class="table-light">
-                                        <tr>
-                                            <th>Item</th>
-                                            <th class="text-center">Imagen</th>
-                                            <th class="text-center">Código QR</th>
-                                        </tr>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th class="text-center">Imagen</th>
+                                        <th class="text-center">Código QR</th>
+                                    </tr>
                                     </thead>
                                     <tbody>
-                                        {% for item in request.user.item_set.all %}
-                                            <tr>
-                                                <td>
-                                                    <a href="{% url 'edit_item' item.uuid %}" class="text-decoration-none">
-                                                        {{ item.name }}
+                                    {% for item in request.user.item_set.all %}
+                                        <tr>
+                                            <td>
+                                                <a href="{% url 'edit_item' item.uuid %}" class="text-decoration-none">
+                                                    {{ item.name }}
+                                                </a>
+                                            </td>
+                                            <td class="text-center">
+                                                <a href="{% url 'change_item_picture' item.uuid %}">
+                                                    <img src="{{ item.get_image }}" class="item-photo rounded"
+                                                         width="120" alt="Imagen del item"/>
+                                                </a>
+                                            </td>
+                                            <td class="text-center">
+                                                {% if item.get_qrcode %}
+                                                    <img src="{{ item.get_qrcode }}" class="qrcode mb-2" alt="Código QR"
+                                                         width="60"/>
+                                                    <br/>
+                                                    <a href="{% url 'download_qr' item.uuid %}"
+                                                       class="btn btn-sm btn-outline-primary" download>
+                                                        <i class="bi bi-cloud-download me-1"></i>Descargar
                                                     </a>
-                                                </td>
-                                                <td class="text-center">
-                                                    <a href="{% url 'change_item_picture' item.uuid %}">
-                                                        <img src="{{ item.get_image }}" class="item-photo rounded" width="120" alt="Imagen del item" />
-                                                    </a>
-                                                </td>
-                                                <td class="text-center">
-                                                    {% if item.get_qrcode %}
-                                                        <img src="{{ item.get_qrcode }}" class="qrcode mb-2" alt="Código QR" width="60" />
-                                                        <br/>
-                                                        <a href="{% url 'download_qr' item.uuid %}" class="btn btn-sm btn-outline-primary" download>
-                                                            <i class="bi bi-cloud-download me-1"></i>Descargar
-                                                        </a>
-                                                    {% endif %}
-                                                </td>
-                                            </tr>
-                                        {% endfor %}
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
                                     </tbody>
                                 </table>
                             </div>
@@ -187,8 +192,8 @@
                         <i class="bi bi-info-circle me-2"></i>No tienes items registrados.
                     </div>
                 {% endif %}
-            </main>
-        {% else %}
-            <p>INICIA SESION</p>
-        {% endif %}
+        </main>
+    {% else %}
+        <p>INICIA SESION</p>
+    {% endif %}
 {% endblock %}

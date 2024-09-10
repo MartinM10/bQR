@@ -54,7 +54,7 @@ class Customer(AbstractUser):
     public_profile = models.BooleanField(default=False)
     email = models.EmailField(blank=True, null=True)
     email_verified = models.BooleanField(default=False)
-    google_picture = models.URLField(max_length=255, blank=True, null=True)
+    google_picture_url = models.URLField(max_length=255, blank=True, null=True)
 
     REQUIRED_FIELDS = ["email", "phone"]
 
@@ -70,9 +70,19 @@ class Customer(AbstractUser):
         Return the user image.
         """
         if self.image:
-            return '{}{}'.format(MEDIA_URL, self.image)
+            return f'{MEDIA_URL}{self.image}'
+        elif self.google_picture_url:
+            return self.google_picture_url
+        return f'{STATIC_URL}images/user_image_empty.png'
 
-        return '{}{}'.format(STATIC_URL, 'images/user_image_empty.png')
+    """
+    def get_image(self):
+        if self.image:
+            return self.image.url
+        elif self.google_picture:
+            return self.google_picture
+        return '/static/images/default_profile.png'  # Provide a default image path
+    """
 
     subscription_plan = models.ForeignKey(SubscriptionPlan, on_delete=models.SET_NULL, null=True, blank=True)
     subscription_end_date = models.DateTimeField(null=True, blank=True)
@@ -131,7 +141,7 @@ class Item(models.Model):
     name = models.CharField(max_length=150)
     description = models.TextField(null=True, blank=True)
     image = models.ImageField(upload_to=upload_to_items, null=True, blank=True)
-    qrCode = models.ImageField(upload_to='qr_codes/', blank=True, null=True)
+    qrCode = models.ImageField(upload_to=upload_to_qr, blank=True, null=True)
 
     REQUIRED_FIELDS = ["name"]
 
