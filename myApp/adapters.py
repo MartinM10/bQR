@@ -39,12 +39,10 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
             picture_url = sociallogin.account.extra_data.get('picture')
             if picture_url:
                 if getattr(settings, 'DOWNLOAD_SOCIAL_PROFILE_PICTURE', False):
-                    print('ENTRA')
                     # Download and save the image
                     response = requests.get(picture_url)
                     if response.status_code == 200:
                         filename = f"{user.username}_profile_pic.jpg"
-                        print('se guardaaaaaaaaaaaaa')
                         user.image.save(filename, ContentFile(response.content), save=True)
                 else:
                     # Store the URL directly

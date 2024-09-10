@@ -61,9 +61,6 @@ def home(request):
     subscription_type = request.user.get_subscription_type()
     is_premium = subscription_type != "FREE"
 
-    print("URL DE LA IMAGEN: ", request.user.image)
-    print("GOOGLE IMAGEN: ", request.user.google_picture_url)
-
     context = {
         'notifications': notifications,
         'total_notifications': total_notifications,
