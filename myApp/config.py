@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DEBUG = env['DEBUG']
-ORGANIZATION_EMAIL = env['USER_EMAIL']
+ORGANIZATION_EMAIL = env['ORGANIZATION_EMAIL']
 PASSWORD_EMAIL = env['PASSWORD_EMAIL']
 DOMAIN = env['DOMAIN']
 SECRET_KEY = env['SECRET_KEY']
