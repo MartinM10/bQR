@@ -2,21 +2,37 @@
 {% block content %}
     <section class="card">
         <div class="card-header bg-primary text-white">
-            <h4 class="mb-0">Todas las Notificaciones</h4>
+            <h2 class="h5 mb-0">Todas las Notificaciones</h2>
         </div>
         <div class="card-body">
             {% if notifications %}
-                <ul class="list-group">
+                <ul class="list-group" aria-live="polite">
                     {% for notification in notifications %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center {% if not notification.is_read %}list-group-item-warning{% endif %}">
-                            <div>
-                                {{ notification.message }}
-                                <small class="text-muted d-block">{{ notification.created_at|date:"d/m/Y H:i" }}</small>
-                            </div>
-                            {% if not notification.is_read %}
-                                <a href="{% url 'mark_notification_as_read' notification.id %}"
-                                   class="btn btn-sm btn-outline-secondary">Marcar como leída</a>
-                            {% endif %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center mt-2 {% if not notification.is_read %}list-group-item-warning{% endif %}">
+                            <article>
+                                <p class="mb-1">
+                                    <strong class="text-muted">Gravedad:</strong>
+                                    <span class="badge {% if notification.severity == 'low' %}bg-success{% elif notification.severity == 'medium' %}bg-warning{% elif notification.severity == 'high' %}bg-danger{% elif notification.severity == 'urgent' %}badge-urgent{% else %}bg-info{% endif %}">
+                                                        {{ notification.get_severity_display|default:"N/A" }}
+                                                    </span>
+                                </p>
+                                <p class="mb-1">
+                                    <strong class="text-muted">Asunto:</strong>
+                                    <em>{{ notification.get_reason_display|default:"N/A" }}</em>
+                                </p>
+                                <p class="mb-1">
+                                    <strong class="text-muted">Mensaje:</strong>
+                                    {{ notification.message }}
+                                </p>
+                                <time class="text-muted"
+                                      datetime="{{ notification.created_at|date:'Y-m-d H:i' }}">
+                                    <strong>Fecha:</strong> {{ notification.created_at|date:"d/m/Y H:i" }}
+                                </time>
+                                {% if not notification.is_read %}
+                                    <a href="{% url 'mark_notification_as_read' notification.id %}"
+                                       class="btn btn-sm btn-outline-secondary">Marcar como leída</a>
+                                {% endif %}
+                            </article>
                         </li>
                     {% endfor %}
                 </ul>

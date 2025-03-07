@@ -1,20 +1,20 @@
 {% extends 'base.html' %}
 {% block content %}
-    <section class="container mt-4">
-        <h2 class="mb-4">Gestionar Suscripción</h2>
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">Plan Actual: {{ current_plan.name }}</h5>
-                <p><strong>Fecha de finalización:</strong> {{ subscription_end_date|date:"d/m/Y" }}</p>
-                <p><strong>Autorenovación:</strong> {% if auto_renew %}Activada{% else %}Desactivada{% endif %}</p>
-                <a href="{% url 'upgrade_to_premium' %}" class="btn btn-primary">Cambiar Plan</a>
-                <form method="post" action="{% url 'toggle_auto_renew' %}" class="d-inline">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-secondary">
-                        {% if auto_renew %}Desactivar{% else %}Activar{% endif %} Autorenovación
-                    </button>
-                </form>
-            </div>
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">Gestionar Suscripción</h2>
         </div>
-    </section>
+        <div class="card-body">
+            <h5 class="card-title">Plan Actual: {{ current_plan.name }}</h5>
+            <p><strong>Fecha de finalización:</strong> {{ subscription_end_date|date:"d/m/Y" }}</p>
+            <p><strong>Autorenovación:</strong> {% if auto_renew %}Activada{% else %}Desactivada{% endif %}</p>
+            <a href="{% url 'upgrade_to_premium' %}" class="btn btn-primary">Cambiar Plan</a>
+            <form method="post" action="{% url 'toggle_auto_renew' %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-secondary">
+                    {% if auto_renew %}Desactivar{% else %}Activar{% endif %} Autorenovación
+                </button>
+            </form>
+        </div>
+    </div>
 {% endblock %}

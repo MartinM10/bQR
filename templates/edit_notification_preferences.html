@@ -4,7 +4,7 @@
 {% block content %}
     <div class="card">
         <div class="card-header bg-primary text-white">
-            <h4 class="mb-0">Editar Preferencias de Notificación</h4>
+            <h2 class="h5 mb-0">Editar Preferencias de Notificación</h2>
         </div>
         <div class="card-body">
             {% if form.fields %}
@@ -41,7 +41,7 @@
                         {{ form.show_contact_info_on_scan|as_crispy_field }}
                         <div class="alert alert-info" role="alert">
                             <i class="bi bi-info-circle me-2"></i>
-                            <strong>Consejo:</strong> Al activar esta opción tu número de teléfono y tu email serán
+                            <strong>💡 Consejo:</strong> Al activar esta opción tu número de teléfono y tu email serán
                             públicos y cualquier persona que escanee alguno de tus QR podrá verlos.
                         </div>
                     {% endif %}

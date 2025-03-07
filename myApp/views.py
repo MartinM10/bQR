@@ -1,4 +1,7 @@
 import os
+import random
+import string
+
 from django.utils import timezone
 from datetime import time
 from django.contrib import messages
@@ -11,16 +14,18 @@ from django.contrib.auth import authenticate, login, logout, update_session_auth
 from beQR import settings
 from myApp.config import DOMAIN, ORGANIZATION_EMAIL
 from myApp.forms import ContactForm, CustomUserCreationForm, FormItem, ChangePasswordForm, ChangeProfilePictureForm, \
-    ChangeItemPictureForm, NotificationPreferenceForm, EditProfileForm
-from myApp.models import Item, Customer
-from .models import Notification, NotificationPreference, SubscriptionPlan
+    ChangeItemPictureForm, NotificationPreferenceForm, EditProfileForm, QRCodeOrderForm, ShippingAddressForm
+from myApp.models import Item, Customer, ShippingAddress, QRCodeOrder, Notification, NotificationPreference, \
+    SubscriptionPlan, QRCode
 from .utils import send_notification, generate_styled_qr
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
-from django.core.mail import send_mail
 from django.urls import reverse
 from django.contrib.auth.hashers import make_password
+from django.core.mail import send_mail
+import cv2
+import numpy as np
 
 
 def create_notification(user, message):
@@ -54,6 +59,7 @@ def login_request(request):
 
 @login_required
 def home(request):
+    items = Item.objects.filter(owner=request.user)
     notifications = Notification.objects.filter(user=request.user).order_by('-created_at')[:3]
     total_notifications = Notification.objects.filter(user=request.user).count()
     unread_notifications = Notification.objects.filter(user=request.user, is_read=False).count()
@@ -61,12 +67,16 @@ def home(request):
     subscription_type = request.user.get_subscription_type()
     is_premium = subscription_type != "FREE"
 
+    items_without_qr = Item.objects.filter(owner=request.user, qr_code__isnull=True)
+
     context = {
+        'items': items,
         'notifications': notifications,
         'total_notifications': total_notifications,
         'unread_notifications': unread_notifications,
         'subscription_type': subscription_type,
         'is_premium': is_premium,
+        'items_without_qr': items_without_qr,
     }
     return render(request, 'home.html', context)
 
@@ -205,37 +215,28 @@ def verify_email(request, uidb64, token):
 
 @login_required
 def register_item(request):
+    current_items_count = Item.objects.filter(owner=request.user).count()
+    can_create_new_item = current_items_count < request.user.subscription_plan.max_items
+
     if request.method == 'POST':
+        if not can_create_new_item:
+            messages.error(request, 'Has alcanzado el límite de items para tu plan actual.')
+            return redirect('upgrade_to_premium')
+
         form = FormItem(request.POST, request.FILES)
         if form.is_valid():
-            current_items_count = Item.objects.filter(owner=request.user).count()
-            if current_items_count < request.user.subscription_plan.max_items:
-                item = form.save(commit=False)
-                item.owner = request.user
-
-                # Save the item image
-                if 'image' in request.FILES:
-                    item.image = request.FILES['image']
-
-                item.save()
-
-                # Generate the QR code
-                owner_uuid = str(request.user.uuid)
-                url = f'{DOMAIN}/scan-qr/{owner_uuid}'
-                qr_image = generate_styled_qr(url, item.name)
-
-                # Save the QR code image
-                qr_filename = f'{item.name}_qr.png'
-                item.qrCode.save(qr_filename, ContentFile(qr_image), save=True)
-
-                messages.success(request, 'Item registrado exitosamente.')
-                return redirect('home')
-            else:
-                messages.error(request,
-                               'Has alcanzado el límite de items para tu plan actual. Considera actualizar tu plan.')
+            item = form.save(commit=False)
+            item.owner = request.user
+            item.save()
+            messages.success(request, 'Item registrado exitosamente.')
+            return redirect('home')
     else:
         form = FormItem()
-    return render(request, 'register_item.html', {'form': form})
+
+    return render(request, 'register_item.html', {
+        'form': form,
+        'can_create_new_item': can_create_new_item
+    })
 
 
 @login_required()
@@ -263,7 +264,7 @@ def download_qr(request, item_id):
     item = Item.objects.get(uuid=item_id)
 
     # Obtén la ruta de archivo del campo ImageField 'qr_code'
-    qr_image_path = item.qrCode.path
+    qr_image_path = item.qr_code.qr_image.path
 
     # Verifica si el archivo existe en la ruta proporcionada
     if qr_image_path and os.path.isfile(qr_image_path):
@@ -278,8 +279,37 @@ def download_qr(request, item_id):
         return HttpResponse("El archivo QR no está disponible.", status=404)
 
 
-def scan_qr(request, owner_id):
-    owner = get_object_or_404(Customer, uuid=owner_id)
+def scan_qr(request, qr_uuid):
+    try:
+        qr = QRCode.objects.get(uuid=qr_uuid)
+        if not qr.is_activated:
+            return redirect('activate_qr', qr_uuid=qr_uuid)
+        elif not qr.is_assigned:
+            return redirect('associate_qr_to_item', qr_uuid)
+        else:
+            return handle_assigned_qr(request, qr.item)
+    except QRCode.DoesNotExist:
+        try:
+            item = Item.objects.get(qr_code__uuid=qr_uuid)
+            return handle_assigned_qr(request, item)
+        except Item.DoesNotExist:
+            return HttpResponse("Invalid QR code", status=404)
+
+
+def handle_promotional_qr(request, promo_qr):
+    if promo_qr.is_used and promo_qr.associated_item:
+        return handle_assigned_qr(request, promo_qr.associated_item)
+    elif not promo_qr.is_used:
+        if request.user.is_authenticated:
+            return render(request, 'associate_qr.html', {'promo_qr': promo_qr})
+        else:
+            return redirect('login')
+    else:
+        return HttpResponse("This promotional QR code has been used but is not associated with any item.", status=400)
+
+
+def handle_assigned_qr(request, item):
+    owner = item.owner
 
     try:
         preferences = NotificationPreference.objects.get(user=owner)
@@ -312,19 +342,23 @@ def scan_qr(request, owner_id):
                 else:
                     messages.error(request, 'No se pudo enviar el mensaje. Ocurrió un error inesperado.')
             else:
-                messages.error(request,
-                               'No se pudo enviar el mensaje. El dueño del QR no puede recibir notificaciones en este momento.')
+                messages.error(request, 'No se pudo enviar el mensaje. El dueño del QR no puede recibir '
+                                        'notificaciones en este momento.')
 
-            return redirect('scan_qr', owner_id=owner_id)
+            return redirect('scan_qr', qr_uuid=item.qr_code.uuid)
     else:
         form = ContactForm(contact_methods=contact_methods)
+
+    can_modify_notification_hours = False
+    if owner.subscription_plan and owner.subscription_plan.can_modify_notification_hours:
+        can_modify_notification_hours = True
 
     context = {
         'owner': owner,
         'form': form,
         'contact_methods': contact_methods,
         'is_premium': owner.subscription_plan and owner.subscription_plan.name != 'FREE',
-        'can_modify_notification_hours': owner.subscription_plan and owner.subscription_plan.can_modify_notification_hours if owner.subscription_plan else False,
+        'can_modify_notification_hours': can_modify_notification_hours,
         'current_time': timezone.localtime(timezone.now()),
         'can_receive_notification': owner.can_receive_notification(),
         'show_contact_info': show_contact_info
@@ -430,3 +464,306 @@ def toggle_auto_renew(request):
         request.user.save()
         messages.success(request, 'La configuración de autorenovación ha sido actualizada.')
     return redirect('manage_subscription')
+
+
+@login_required
+def order_qr_codes(request):
+    if request.method == 'POST':
+        form = QRCodeOrderForm(request.POST, user=request.user)
+        print("Formulario enviado")
+        print("Datos del POST:", request.POST)
+        if form.is_valid():
+            print("Formulario válido")
+            order = form.save(commit=False)
+            order.user = request.user
+            order.total_price = calculate_total_price(form.cleaned_data['items'])
+            order.save()
+            form.save_m2m()
+            messages.success(request, 'Pedido realizado con éxito.')
+            return redirect('home')
+        else:
+            print("Errores del formulario:", form.errors)
+            print("Datos del formulario:", form.data)
+    else:
+        form = QRCodeOrderForm(user=request.user)
+
+    # Debug: Check all items for this user
+    all_user_items = Item.objects.filter(owner=request.user)
+    print(f"All user items: {all_user_items.count()}")
+
+    # Debug: Check items without QR codes
+    items_without_qr = Item.objects.filter(owner=request.user, qr_code__isnull=True)
+    print(f"Items without QR: {items_without_qr.count()}")
+
+    print("Items disponibles:", form.fields['items'].queryset)
+
+    return render(request, 'order_qr_codes.html', {'form': form})
+
+
+def calculate_total_price(items):
+    return sum(item.price for item in items)
+
+
+@login_required
+def add_shipping_address(request):
+    if request.method == 'POST':
+        form = ShippingAddressForm(request.POST)
+        if form.is_valid():
+            address = form.save(commit=False)
+            address.user = request.user
+            address.save()
+            messages.success(request, 'Shipping address added successfully.')
+            return redirect('manage_shipping_addresses')
+    else:
+        form = ShippingAddressForm()
+    return render(request, 'add_shipping_address.html', {'form': form})
+
+
+@login_required
+def edit_shipping_address(request, address_id):
+    address = get_object_or_404(ShippingAddress, id=address_id, user=request.user)
+    if request.method == 'POST':
+        form = ShippingAddressForm(request.POST, instance=address)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Shipping address updated successfully.')
+            return redirect('manage_shipping_addresses')
+    else:
+        form = ShippingAddressForm(instance=address)
+    return render(request, 'edit_shipping_address.html', {'form': form})
+
+
+@login_required
+def delete_shipping_address(request, address_id):
+    address = get_object_or_404(ShippingAddress, id=address_id, user=request.user)
+    if request.method == 'POST':
+        address.delete()
+        messages.success(request, 'Shipping address deleted successfully.')
+    return redirect('manage_shipping_addresses')
+
+
+@login_required
+def set_default_shipping_address(request, address_id):
+    address = get_object_or_404(ShippingAddress, id=address_id, user=request.user)
+    address.default = True
+    address.save()
+    messages.success(request, 'Default shipping address set successfully.')
+    return redirect('manage_shipping_addresses')
+
+
+@login_required
+def manage_shipping_addresses(request):
+    addresses = ShippingAddress.objects.filter(user=request.user)
+    customer = get_object_or_404(Customer, uuid=request.user.uuid)
+    default_address = customer.get_default_shipping_address()
+    return render(request, 'manage_shipping_addresses.html', {
+        'addresses': addresses,
+        'default_address': default_address
+    })
+
+
+def decode_qr(image):
+    # Convertir la imagen PIL a un array numpy
+    np_image = np.array(image)
+
+    # Verificar si la imagen es en escala de grises o en color
+    if len(np_image.shape) == 2:
+        gray = np_image
+    elif len(np_image.shape) == 3:
+        # Si es una imagen en color, convertirla a escala de grises
+        gray = cv2.cvtColor(np_image, cv2.COLOR_RGB2GRAY)
+    else:
+        raise ValueError("Formato de imagen no soportado")
+
+    # Asegurarse de que la imagen esté en el formato correcto para OpenCV
+    gray = np.uint8(gray)
+
+    # Inicializar el detector de QR
+    qr_decoder = cv2.QRCodeDetector()
+
+    # Detectar y decodificar el QR
+    data, bbox, _ = qr_decoder.detectAndDecode(gray)
+
+    if data:
+        return data
+    return None
+
+
+@login_required
+def associate_qr(request, item_uuid=None):
+    if item_uuid:
+        item = get_object_or_404(Item, uuid=item_uuid, owner=request.user)
+    else:
+        item = None
+
+    if request.method == 'POST':
+        secret_code = request.POST.get('secret_code')
+        print(secret_code)
+
+        if not secret_code:
+            messages.error(request, 'Por favor, proporcione un código QR válido.')
+            return render(request, 'associate_qr.html', {'item': item})
+
+        qr_uuid = secret_code.split('/')[-1]
+        print('extracción del uuid: ', qr_uuid)
+        # Remove hyphens from the promo_code
+        qr_uuid = qr_uuid.replace('-', '')
+        try:
+            qr = QRCode.objects.get(uuid=qr_uuid)
+
+            if not qr.is_activated:
+                messages.info(request, 'El código QR necesita ser activado primero.')
+                return redirect('activate_qr', qr_uuid=qr.uuid)
+            elif qr.is_assigned:
+                messages.error(request, 'El código QR ya ha sido utilizado.')
+            else:
+                if item:
+                    qr_image_content = None
+                    if qr.qr_image:
+                        # Get the QR image content
+                        print("ENTRA ACA 1")
+                        qr_image_content = qr.qr_image.read()
+                    else:
+                        # Generate new QR code
+                        print("ENTRA ACA 2")
+                        # qr_image_content = generate_qr_code(item)
+
+                    # Generate a filename for the new QR image
+                    filename = f'{secret_code}.png'
+
+                    qr.is_used = True
+                    qr.used_by = request.user
+                    qr.used_on = timezone.now()
+                    qr.save()
+
+                    item.qr_code = qr
+
+                    # Save the QR image to the item
+                    item.qr_code.qr_image.save(filename, ContentFile(qr_image_content), save=True)
+
+                    messages.success(request, 'Código QR asociado exitosamente al ítem.')
+                    return redirect('home')
+                else:
+                    return redirect('associate_qr_to_item', qr_uuid=secret_code.code)
+        except QRCode.DoesNotExist:
+            messages.error(request, 'Código QR no encontrado.')
+
+    return render(request, 'associate_qr.html', {'item': item})
+
+
+@login_required
+def associate_qr_to_item(request, qr_uuid):
+    qr = get_object_or_404(QRCode, uuid=qr_uuid, is_physical=True, is_activated=True, is_assigned=False)
+    customer = get_object_or_404(Customer, uuid=request.user.uuid)
+
+    if request.method == 'POST':
+        item_uuid = request.POST.get('item_uuid')
+        if item_uuid == 'new':
+            form = FormItem(request.POST, request.FILES)
+            print(request.FILES)
+            if form.is_valid():
+                item = form.save(commit=False)
+                item.owner = request.user
+                item.qr_code = qr
+                item.save()
+                qr.is_assigned = True
+                qr.used_by = request.user
+                qr.used_on = timezone.now()
+                qr.associated_item = item
+                qr.save()
+                messages.success(request, f'Nuevo ítem creado y asociado con el código QR {qr.uuid}.')
+                return redirect('home')
+        else:
+            item = get_object_or_404(Item, id=item_uuid, owner=request.user)
+            item.qr_code = qr
+            item.save()
+            qr.is_assigned = True
+            qr.used_by = request.user
+            qr.used_on = timezone.now()
+            qr.associated_item = item
+            qr.save()
+            messages.success(request, f'Código QR {qr.uuid} asociado exitosamente al ítem {item.name}.')
+            return redirect('home')
+
+    available_items = Item.objects.filter(owner=request.user, qr_code__isnull=True)
+    form = FormItem()
+
+    current_items_count = Item.objects.filter(owner=request.user).count()
+    can_create_new_item = current_items_count < customer.subscription_plan.max_items
+
+    return render(request, 'associate_qr_to_item.html', {
+        'qr': qr,
+        'available_items': available_items,
+        'form': form,
+        'can_create_new_item': can_create_new_item,
+        'current_items_count': current_items_count,
+        'subscription_plan': customer.subscription_plan
+    })
+
+
+@login_required
+def generate_qr(request, item_uuid):
+    item = get_object_or_404(Item, uuid=item_uuid, owner=request.user)
+
+    if not item.qr_code:
+        qr_to_assign = QRCode.objects.filter(is_physical=False, is_activated=False, is_assigned=False).first()
+        if not qr_to_assign:
+            qr_to_assign = QRCode.objects.create(
+                is_physical=False,
+                is_activated=False,
+                is_assigned=False,
+                secret_code=''.join(random.choices(string.digits, k=6))
+            )
+
+        # Asignar el QR al item
+        item.qr_code = qr_to_assign
+        item.save()
+        qr_to_assign.is_activated = True
+        qr_to_assign.is_assigned = True
+        qr_to_assign.save()
+
+    url = f'{DOMAIN}/scan-qr/{item.qr_code.uuid}'
+    qr_image = generate_styled_qr(url, item.name)
+    qr_filename = f'{request.user.username}/{item.name}_qr.png'  # Ruta personalizada
+
+    # Guardar la imagen del QR
+    item.qr_code.qr_image.save(qr_filename, ContentFile(qr_image), save=True)
+    messages.success(request, 'Código QR generado exitosamente.')
+
+    return redirect('home')
+
+
+@login_required
+def activate_qr(request, qr_uuid):
+    qr = get_object_or_404(QRCode, uuid=qr_uuid, is_activated=False)
+
+    if request.method == 'POST':
+        subject = 'Activación de Código QR'
+        message = f'Tu código secreto para activar el QR es: {qr.secret_code}'
+        from_email = ORGANIZATION_EMAIL
+        # send_mail(subject, message, from_email, [request.user.email], fail_silently=False) TODO: EN PROD. DESCOMENTAR
+        messages.success(request, 'Se ha enviado un código secreto a tu email.')
+        print(subject)
+        print(message)
+        print(from_email)
+        return redirect('enter_secret_code', qr_uuid=qr_uuid)
+
+    return render(request, 'activate_qr.html', {'qr': qr})
+
+
+@login_required
+def enter_secret_code(request, qr_uuid):
+    qr = get_object_or_404(QRCode, uuid=qr_uuid, is_activated=False)
+
+    if request.method == 'POST':
+        secret_code = request.POST.get('secret_code')
+        if secret_code == qr.secret_code:
+            qr.is_activated = True
+            # qr.activation_email = request.user.email
+            qr.save()
+            messages.success(request, 'Código QR activado correctamente. Ahora puedes asociar el QR a un item')
+            return redirect('associate_qr_to_item', qr_uuid=qr_uuid)
+        else:
+            messages.error(request, 'Código secreto incorrecto. Inténtalo de nuevo.')
+
+    return render(request, 'enter_secret_code.html', {'qr_uuid': qr_uuid})

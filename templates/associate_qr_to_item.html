@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h2 class="mb-0">Asociar Código QR a un Ítem</h2>
+                    </div>
+                    <div class="card-body">
+                        <p class="lead">Código QR: <strong>{{ qr.uuid }}</strong></p>
+                        <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <h4 class="mb-3">Seleccionar Ítem para Asociar:</h4>
+                            {% if available_items %}
+                                <div class="list-group mb-4">
+                                    {% for item in available_items %}
+                                        <label class="list-group-item list-group-item-action">
+                                            <input type="radio" name="item_uuid" value="{{ item.id }}" required
+                                                   class="me-2">
+                                            {{ item.name }}
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            {% if can_create_new_item %}
+                                <div class="mb-4">
+                                    <label class="list-group-item list-group-item-action">
+                                        <input type="radio" name="item_uuid" value="new" id="new_item_radio" required
+                                               class="me-2">
+                                        <strong>Crear nuevo ítem</strong>
+                                    </label>
+                                </div>
+                                <div id="new_item_form" style="display: none;">
+                                    <h4 class="mb-3">Crear Nuevo Ítem</h4>
+                                    <div class="small p-3 mb-2 bg-warning-subtle">
+                                        <p>El ítem solo será creado si su plan de suscripción se lo permite.</p>
+                                        <p>
+                                            Su plan de suscripción es <strong>"{{ subscription_plan }}"</strong>.
+                                        </p>
+                                        <p>
+                                            <strong>
+                                                El plan de suscripción {{ subscription_plan.name }} permite
+                                                {{ subscription_plan.max_items }} y usted tiene registrados
+                                                {{ current_items_count }}.
+                                            </strong>
+                                        </p>
+                                    </div>
+                                    <div class="card">
+                                        <div class="card-body">
+                                            {{ form|crispy }}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            <div class="d-grid gap-2 mt-4">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="bi bi-link me-2"></i>Asociar QR
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const newItemRadio = document.getElementById('new_item_radio');
+            const newItemForm = document.getElementById('new_item_form');
+            const nameInput = document.getElementById('id_name');  // Captura el campo de nombre
+
+            function toggleNewItemForm() {
+                if (newItemRadio.checked) {
+                    newItemForm.style.display = 'block';
+                    nameInput.setAttribute('required', 'true'); // Habilita el required
+                } else {
+                    newItemForm.style.display = 'none';
+                    nameInput.removeAttribute('required'); // Deshabilita el required
+                }
+            }
+
+            if (newItemRadio && newItemForm && nameInput) {
+                newItemRadio.addEventListener('change', toggleNewItemForm);
+            }
+
+            const itemRadios = document.querySelectorAll('input[name="item_uuid"]');
+            itemRadios.forEach(function (radio) {
+                radio.addEventListener('change', function () {
+                    if (this.value !== 'new') {
+                        newItemForm.style.display = 'none';
+                        nameInput.removeAttribute('required'); // Deshabilita el required
+                    }
+                });
+            });
+        });
+    </script>
+    
+{% endblock %}

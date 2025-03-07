@@ -9,7 +9,9 @@ from myApp.views import (home, register, register_item, logout_request, login_re
                          download_qr, scan_qr, verify_email, change_password, password_change_success_view,
                          change_profile_picture, change_item_picture, upgrade_to_premium, manage_subscription,
                          edit_notification_preferences, view_all_notifications, mark_notification_as_read,
-                         toggle_auto_renew)
+                         toggle_auto_renew, order_qr_codes, add_shipping_address, edit_shipping_address,
+                         delete_shipping_address, set_default_shipping_address, manage_shipping_addresses, generate_qr,
+                         activate_qr, enter_secret_code, associate_qr_to_item, associate_qr)
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 
@@ -38,7 +40,6 @@ urlpatterns = [
                   path('edit/item/<str:item_id>', edit_item, name='edit_item'),
                   path('edit-profile/', edit_profile, name='edit_profile'),
                   path('download-qr/<str:item_id>', download_qr, name='download_qr'),
-                  path('scan-qr/<str:owner_id>', scan_qr, name='scan_qr'),
                   path('change_password/', change_password, name='change_password'),
                   path('password_change_success/', password_change_success_view, name='password_change_success'),
                   path('change_profile_picture/', change_profile_picture, name='change_profile_picture'),
@@ -59,4 +60,25 @@ urlpatterns = [
                           name='schema-json'),
                   path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
                   path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+                  path('order-qr-codes/', order_qr_codes, name='order_qr_codes'),
+                  path('add-shipping-address/', add_shipping_address, name='add_shipping_address'),
+                  path('edit-shipping-address/<int:address_id>/', edit_shipping_address, name='edit_shipping_address'),
+                  path('delete-shipping-address/<int:address_id>/', delete_shipping_address,
+                       name='delete_shipping_address'),
+                  path('set-default-shipping-address/<int:address_id>/', set_default_shipping_address,
+                       name='set_default_shipping_address'),
+                  path('manage-shipping-addresses/', manage_shipping_addresses, name='manage_shipping_addresses'),
+                  path('generate-qr/<str:item_uuid>/', generate_qr, name='generate_qr'),
+
+                  # path('activate-promo-qr/<str:promo_code>/', activate_promo_qr, name='activate_promo_qr'),
+                  path('scan-qr/<str:qr_uuid>/', scan_qr, name='scan_qr'),
+                  path('activate-qr/<str:qr_uuid>/', activate_qr, name='activate_qr'),
+                  path('enter-secret-code/<str:qr_uuid>/', enter_secret_code, name='enter_secret_code'),
+
+                  # Se llega a traves de scan QR (el camino es scan-qr, activate-qr, enter-secret-code,
+                  # associate-qr-to-item)
+                  path('associate-qr-to-item/<str:qr_uuid>/', associate_qr_to_item,
+                       name='associate_qr_to_item'),
+
+                  path('associate-qr/<str:item_uuid>/', associate_qr, name='associate_qr'),
               ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

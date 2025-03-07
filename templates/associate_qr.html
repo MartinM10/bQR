@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+    <div class="container mt-4">
+        <h2>Asociar Código QR</h2>
+        <form method="post" enctype="multipart/form-data" id="qrForm">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label for="qr_image" class="form-label">Subir imagen QR:</label>
+                <input type="file" class="form-control" id="qr_image" name="qr_image" accept="image/*">
+            </div>
+            <div class="mb-3">
+                <label for="secret_code" class="form-label">Código secreto del QR:</label>
+                <input type="text" class="form-control" id="secret_code" name="secret_code" readonly>
+            </div>
+            <button type="submit" class="btn btn-primary">Asociar QR</button>
+        </form>
+    </div>
+
+    <div id="reader" width="600px"></div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script>
+        function onScanSuccess(decodedText, decodedResult) {
+            console.log(`Code matched = ${decodedText}`, decodedResult);
+            document.getElementById('secret_code').value = decodedText;
+            html5QrcodeScanner.clear();
+        }
+
+        function onScanFailure(error) {
+            console.warn(`Code scan error = ${error}`);
+        }
+
+        let html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader",
+            {fps: 10, qrbox: {width: 250, height: 250}},
+            /* verbose= */ false
+        );
+        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+
+        document.getElementById('qr_image').addEventListener('change', function (event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const img = new Image();
+                    img.onload = function () {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0, img.width, img.height);
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const code = jsQR(imageData.data, imageData.width, imageData.height);
+                        if (code) {
+                            document.getElementById('secret_code').value = code.data;
+                        } else {
+                            alert('No se pudo detectar un código QR en la imagen.');
+                        }
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    </script>
+{% endblock %}

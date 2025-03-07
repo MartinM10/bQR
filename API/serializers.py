@@ -37,7 +37,7 @@ class ItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item
         fields = '__all__'
-        read_only_fields = ['qrCode']
+        read_only_fields = ['qr_code']
 
     def create(self, validated_data):
         owner = validated_data['owner']

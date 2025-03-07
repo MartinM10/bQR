@@ -2,44 +2,54 @@
 {% load crispy_forms_filters %}
 
 {% block content %}
-    <section class="container mt-4">
-        <h2>Contactar con el dueño del QR</h2>
-        <p>Hora actual: {{ current_time|time:"H:i" }}</p>
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">Contactar con el dueño del QR</h4>
+        </div>
+        <div class="card-body">
+            <p>Hora actual: {{ current_time|time:"H:i" }}</p>
 
-        {% if is_premium %}
-            <h3>Métodos de contacto disponibles:</h3>
-            <ul>
-                {% for method, label, value in contact_methods %}
-                    <li>
-                        {{ label }}
-                        {% if show_contact_info and value %}
-                            : {{ value }}
-                        {% endif %}
-                    </li>
-                {% endfor %}
-            </ul>
-            {% if can_modify_notification_hours %}
-                <p>Horario de notificaciones: {{ owner.notificationpreference.notification_start_time|time:"H:i" }}
-                    - {{ owner.notificationpreference.notification_end_time|time:"H:i" }}</p>
+            {% if is_premium %}
+                <div class="alert alert-primary">
+                    <h4>Métodos de contacto disponibles:</h4>
+                    <ul>
+                        {% for method, label, value in contact_methods %}
+                            <li>
+                                {{ label }}:
+                                {% if show_contact_info and value %}
+                                    {{ value }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                    {% if can_modify_notification_hours %}
+                        <p>Horario de
+                            notificaciones: {{ owner.notificationpreference.notification_start_time|time:"H:i" }}
+                            - {{ owner.notificationpreference.notification_end_time|time:"H:i" }}</p>
+                    {% endif %}
+                </div>
             {% endif %}
-        {% endif %}
 
-        {% if can_receive_notification %}
-            <form method="post">
-                {% csrf_token %}
-                {{ form.severity|as_crispy_field }}
-                {{ form.reason|as_crispy_field }}
-                {% if is_premium %}
-                    {{ form.contact_method|as_crispy_field }}
-                {% endif %}
-                {{ form.message|as_crispy_field }}
-                <button type="submit" class="btn btn-primary">Enviar mensaje</button>
-            </form>
-        {% else %}
-            <div class="alert alert-warning text-center" style="font-size: 1.2em;">
-                <strong>Aviso:</strong> El dueño del QR no está disponible para recibir notificaciones en este momento.
-                <br>Por favor, intente nuevamente durante el horario de notificaciones establecido.
-            </div>
-        {% endif %}
-    </section>
+            {% if can_receive_notification %}
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form.severity|as_crispy_field }}
+                    {{ form.reason|as_crispy_field }}
+                    {% if is_premium %}
+                        {{ form.contact_method|as_crispy_field }}
+                    {% endif %}
+                    {{ form.message|as_crispy_field }}
+                    <button type="submit" class="btn btn-primary">Enviar mensaje</button>
+                </form>
+            {% else %}
+                <div class="alert alert-warning text-center" style="font-size: 1.2em;">
+                    <strong>Aviso:</strong> El dueño del QR no está disponible para recibir notificaciones en este
+                    momento.
+                    <br>Por favor, intente nuevamente durante el horario de notificaciones establecido.
+                </div>
+            {% endif %}
+        </div>
+    </div>
 {% endblock %}

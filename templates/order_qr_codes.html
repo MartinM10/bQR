@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+    <div class="card">
+        <header class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">Pedir Códigos QR</h2>
+        </header>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                {{ form.non_field_errors }}
+                <div class="fieldWrapper">
+                    {{ form.items.errors }}
+                    <label for="{{ form.items.id_for_label }}">Items:</label>
+                    {{ form.items }}
+                </div>
+                <div class="fieldWrapper">
+                    {{ form.shipping_address.errors }}
+                    <label for="{{ form.shipping_address.id_for_label }}">Dirección de envío:</label>
+                    {{ form.shipping_address }}
+                </div>
+                <button type="submit" class="btn btn-primary mt-3">Realizar Pedido</button>
+            </form>
+        </div>
+    </div>
+{% endblock %}

@@ -90,7 +90,7 @@ def create_items():
                 defaults={'description': item_data['description']}
             )
 
-            if created or not item.qrCode:
+            if created or not item.qr_code:
                 owner_uuid = str(customer.uuid)
                 url = f'{DOMAIN}/scan-qr/{owner_uuid}'
                 qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
@@ -102,7 +102,7 @@ def create_items():
                 img.save(image_io, 'PNG')
                 image_file = SimpleUploadedFile(f'{customer.username}/qr_codes/{item.name}.png',
                                                 image_io.getvalue(), content_type='image/png')
-                item.qrCode = image_file
+                item.qr_code = image_file
                 item.save()
 
     print("Items creados o actualizados respetando los límites del plan y con códigos QR generados.")

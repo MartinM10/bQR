@@ -227,3 +227,6 @@ CSRF_COOKIE_SECURE = True
 # SECURE_CONTENT_TYPE_NOSNIFF = True
 
 DOWNLOAD_SOCIAL_PROFILE_PICTURE = False  # Set to True if you want to download and store the image
+
+QR_CODE_PRICE = 10  # Price in the default currency
+CURRENCY = 'EUR'  # Default currency

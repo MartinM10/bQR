@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, PasswordChangeForm
-from myApp.models import Item, Customer, NotificationPreference
+from myApp.models import Item, Customer, NotificationPreference, ShippingAddress, QRCodeOrder
 from django.core.exceptions import ValidationError
 from PIL import Image
 from datetime import time
@@ -50,9 +50,6 @@ class CustomUserCreationForm(UserCreationForm):
         fields = ['username', 'first_name', 'last_name', 'gender', 'phone', 'email', 'password1', 'password2',
                   'image']
 
-    def clean_image(self):
-        return clean_image(self.cleaned_data.get('image'))
-
 
 class FormItem(forms.ModelForm):
     image = forms.ImageField(required=False, validators=[validate_image])
@@ -61,8 +58,15 @@ class FormItem(forms.ModelForm):
         model = Item
         fields = ['name', 'description', 'image']
 
+    """
     def clean_image(self):
-        return clean_image(self.cleaned_data.get('image'))
+        print(self)
+        image = self.cleaned_data.get('image')
+        print(image)
+        if image:
+            return clean_image(image)
+        return image
+    """
 
 
 class ChangeProfilePictureForm(forms.ModelForm):
@@ -188,3 +192,42 @@ class ContactForm(forms.Form):
         contact_methods = kwargs.pop('contact_methods', [])
         super(ContactForm, self).__init__(*args, **kwargs)
         self.fields['contact_method'].choices = [(method, label) for method, label, _ in contact_methods]
+
+
+class ShippingAddressForm(forms.ModelForm):
+    class Meta:
+        model = ShippingAddress
+        fields = ['address', 'city', 'state', 'country', 'zip_code']
+
+
+class QRCodeOrderForm(forms.ModelForm):
+    items = forms.ModelMultipleChoiceField(
+        queryset=Item.objects.none(),
+        widget=forms.CheckboxSelectMultiple,
+        label='Items',
+        required=True
+    )
+    shipping_address = forms.ModelChoiceField(
+        queryset=ShippingAddress.objects.none(),
+        empty_label="Seleccione una dirección",
+        label='Dirección de envío',
+        required=True
+    )
+
+    class Meta:
+        model = QRCodeOrder
+        fields = ['items', 'shipping_address']
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super(QRCodeOrderForm, self).__init__(*args, **kwargs)
+        if user:
+            self.fields['items'].queryset = Item.objects.filter(owner=user, qr_code__isnull=True)
+            self.fields['shipping_address'].queryset = ShippingAddress.objects.filter(user=user)
+
+            # Add some help text
+            self.fields['items'].help_text = "Selecciona los items para los que necesitas códigos QR"
+            self.fields['shipping_address'].help_text = "Selecciona la dirección donde quieres recibir los códigos QR"
+
+        if not self.fields['items'].queryset.exists():
+            self.fields['items'].help_text = "No hay items disponibles para asignar códigos QR."

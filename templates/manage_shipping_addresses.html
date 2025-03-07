@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+    <section class="card">
+        <header class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">🏠 Gestionar Direcciones de Envío</h2>
+        </header>
+
+        <div class="card-body">
+            <a href="{% url 'add_shipping_address' %}" class="btn btn-primary mb-3">
+                <i class="bi bi-plus-circle me-2"></i>Añadir Nueva Dirección
+            </a>
+            {% if addresses %}
+                {% for address in addresses %}
+                    <article class="col-md-6 mb-3">
+                        <div class="card {% if address == default_address %}border-primary{% else %}border{% endif %}">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    {{ address.address }}
+                                    {% if address == default_address %}
+                                        <span class="badge bg-light text-primary border border-primary ms-2"
+                                              style="font-weight: normal;">Predeterminada</span>
+                                    {% endif %}
+                                </h5>
+                                <p class="card-text">
+                                    {{ address.city }}, {{ address.state }} {{ address.zip_code }}<br>
+                                    {{ address.country }}
+                                </p>
+                                <div class="d-flex justify-content-end gap-2">
+                                    {% if address != default_address %}
+                                        <a href="{% url 'set_default_shipping_address' address.id %}"
+                                           class="btn btn-outline-primary btn-sm">
+                                            <i class="bi bi-star me-1"></i>Establecer por defecto
+                                        </a>
+                                    {% endif %}
+                                    <a href="{% url 'edit_shipping_address' address.id %}"
+                                       class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-pencil me-1"></i>Editar
+                                    </a>
+                                    <form action="{% url 'delete_shipping_address' address.id %}" method="post"
+                                          style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                onclick="return confirm('¿Estás seguro de que quieres eliminar esta dirección?');">
+                                            <i class="bi bi-trash me-1"></i>Eliminar
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                {% endfor %}
+
+            {% else %}
+                <div class="alert alert-info" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>No tienes direcciones de envío guardadas. Añade una para
+                    comenzar.
+                </div>
+
+            {% endif %}
+        </div>
+    </section>
+{% endblock %}
