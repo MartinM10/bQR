@@ -334,10 +334,8 @@ def handle_assigned_qr(request, item):
             message = form.cleaned_data['message']
             contact_method = form.cleaned_data.get('contact_method', '')
 
-            full_message = f"Gravedad: {severity}\nMotivo: {reason}\nMétodo de contacto: {contact_method}\nMensaje: {message}"
-
             if owner.can_receive_notification():
-                if send_notification(owner, full_message, severity, reason):
+                if send_notification(owner, item, message, severity, reason):
                     messages.success(request, 'Mensaje enviado correctamente. Ya hemos notificado al dueño del QR')
                 else:
                     messages.error(request, 'No se pudo enviar el mensaje. Ocurrió un error inesperado.')
@@ -470,38 +468,29 @@ def toggle_auto_renew(request):
 def order_qr_codes(request):
     if request.method == 'POST':
         form = QRCodeOrderForm(request.POST, user=request.user)
-        print("Formulario enviado")
-        print("Datos del POST:", request.POST)
         if form.is_valid():
-            print("Formulario válido")
             order = form.save(commit=False)
             order.user = request.user
             order.total_price = calculate_total_price(form.cleaned_data['items'])
+            # print(order.total_price)
             order.save()
             form.save_m2m()
             messages.success(request, 'Pedido realizado con éxito.')
             return redirect('home')
-        else:
-            print("Errores del formulario:", form.errors)
-            print("Datos del formulario:", form.data)
     else:
         form = QRCodeOrderForm(user=request.user)
 
-    # Debug: Check all items for this user
-    all_user_items = Item.objects.filter(owner=request.user)
-    print(f"All user items: {all_user_items.count()}")
+    default_address = ShippingAddress.objects.filter(user=request.user, default=True).first()
 
-    # Debug: Check items without QR codes
-    items_without_qr = Item.objects.filter(owner=request.user, qr_code__isnull=True)
-    print(f"Items without QR: {items_without_qr.count()}")
-
-    print("Items disponibles:", form.fields['items'].queryset)
-
-    return render(request, 'order_qr_codes.html', {'form': form})
+    return render(request, 'order_qr_codes.html', {
+        'form': form,
+        'default_address': default_address,
+    })
 
 
 def calculate_total_price(items):
-    return sum(item.price for item in items)
+    # return sum(item.price for item in items)
+    return sum(2.99 for item in items)
 
 
 @login_required
@@ -598,16 +587,17 @@ def associate_qr(request, item_uuid=None):
 
     if request.method == 'POST':
         secret_code = request.POST.get('secret_code')
-        print(secret_code)
+        # print(secret_code)
 
         if not secret_code:
             messages.error(request, 'Por favor, proporcione un código QR válido.')
             return render(request, 'associate_qr.html', {'item': item})
 
         qr_uuid = secret_code.split('/')[-1]
-        print('extracción del uuid: ', qr_uuid)
+        # print('extracción del uuid: ', qr_uuid)
         # Remove hyphens from the promo_code
         qr_uuid = qr_uuid.replace('-', '')
+        # print(qr_uuid)
         try:
             qr = QRCode.objects.get(uuid=qr_uuid)
 
@@ -621,12 +611,7 @@ def associate_qr(request, item_uuid=None):
                     qr_image_content = None
                     if qr.qr_image:
                         # Get the QR image content
-                        print("ENTRA ACA 1")
                         qr_image_content = qr.qr_image.read()
-                    else:
-                        # Generate new QR code
-                        print("ENTRA ACA 2")
-                        # qr_image_content = generate_qr_code(item)
 
                     # Generate a filename for the new QR image
                     filename = f'{secret_code}.png'
@@ -660,7 +645,7 @@ def associate_qr_to_item(request, qr_uuid):
         item_uuid = request.POST.get('item_uuid')
         if item_uuid == 'new':
             form = FormItem(request.POST, request.FILES)
-            print(request.FILES)
+            # print(request.FILES)
             if form.is_valid():
                 item = form.save(commit=False)
                 item.owner = request.user
@@ -741,11 +726,8 @@ def activate_qr(request, qr_uuid):
         subject = 'Activación de Código QR'
         message = f'Tu código secreto para activar el QR es: {qr.secret_code}'
         from_email = ORGANIZATION_EMAIL
-        # send_mail(subject, message, from_email, [request.user.email], fail_silently=False) TODO: EN PROD. DESCOMENTAR
+        send_mail(subject, message, from_email, [request.user.email], fail_silently=False)
         messages.success(request, 'Se ha enviado un código secreto a tu email.')
-        print(subject)
-        print(message)
-        print(from_email)
         return redirect('enter_secret_code', qr_uuid=qr_uuid)
 
     return render(request, 'activate_qr.html', {'qr': qr})

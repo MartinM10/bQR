@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Nueva Notificación</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        h4 {
+            color: #555;
+        }
+
+        p {
+            color: #555;
+        }
+
+        .footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Nueva Notificación</h1>
+    <p>Hola {{ user.username }}, alguien ha escaneado el código QR asociado a {{ item.name }} a las {{ time }}
+        y te ha dejado una notificación </p>
+    <h4>"{{ message }}"</h4>
+    <h4><strong>Gravedad:</strong> {{ severity }}</h4>
+    <h4><strong>Razón:</strong> {{ reason }}</h4>
+    <div class="footer">
+        <p>Gracias por usar nuestro servicio.</p>
+        <p>@beQR</p>
+    </div>
+</div>
+</body>
+</html>

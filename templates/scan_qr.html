@@ -37,9 +37,6 @@
                     {% csrf_token %}
                     {{ form.severity|as_crispy_field }}
                     {{ form.reason|as_crispy_field }}
-                    {% if is_premium %}
-                        {{ form.contact_method|as_crispy_field }}
-                    {% endif %}
                     {{ form.message|as_crispy_field }}
                     <button type="submit" class="btn btn-primary">Enviar mensaje</button>
                 </form>

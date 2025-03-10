@@ -1,4 +1,6 @@
 from django.core.mail import send_mail
+from django.utils import timezone
+
 from myApp.models import Notification, NotificationPreference
 import qrcode
 from qrcode.image.styledpil import StyledPilImage
@@ -7,14 +9,16 @@ from PIL import Image, ImageDraw, ImageFont
 import io
 import os
 from django.conf import settings
+from django.template.loader import render_to_string
 
 
-def send_notification(user, message, severity, reason):
+def send_notification(user, item, message, severity, reason):
     if not user.can_receive_notification():
         return False
 
     notification = Notification.objects.create(
         user=user,
+        item_id=item.id,
         message=message,
         severity=severity,
         reason=reason
@@ -28,13 +32,24 @@ def send_notification(user, message, severity, reason):
     sent = False
 
     if preferences:
-        if preferences.email_notifications and user.email:
+        if user.email:
+            # Renderizar la plantilla HTML para el correo
+            email_subject = f'Nueva notificación del item "{item.name}"'
+            email_body = render_to_string('emails/notification_email.html', {
+                'user': user,
+                'item': item,
+                'message': message,
+                'severity': severity,
+                'reason': reason,
+                'time': timezone.now()
+            })
             send_mail(
-                'Nueva notificación',
-                message,
-                settings.DEFAULT_FROM_EMAIL,
-                [user.email],
-                fail_silently=True,
+                subject=email_subject,
+                message=email_body,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                # fail_silently=True,
+                html_message=email_body  # Enviar como HTML
             )
             sent = True
 

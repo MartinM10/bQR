@@ -222,7 +222,8 @@ class QRCodeOrderForm(forms.ModelForm):
         user = kwargs.pop('user', None)
         super(QRCodeOrderForm, self).__init__(*args, **kwargs)
         if user:
-            self.fields['items'].queryset = Item.objects.filter(owner=user, qr_code__isnull=True)
+            self.fields['items'].queryset = Item.objects.filter(owner=user, qr_code__isnull=False,
+                                                                qr_code__is_physical=False)
             self.fields['shipping_address'].queryset = ShippingAddress.objects.filter(user=user)
 
             # Add some help text
